@@ -1,10 +1,18 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
-	component: Home,
+	// TEMP: redirect `/` → `/docs` until the landing page is ready.
+	// `loader` returns a real 307 server-side. To restore the home component,
+	// drop the `loader` and re-add `component: Home`.
+	loader: () => {
+		throw redirect({ to: "/docs/$", params: { _splat: "" } });
+	},
 });
 
-function Home() {
+// Exported so TypeScript doesn't flag it while the route uses a redirect
+// instead of rendering it. Add `component: Home` to the Route config above
+// (and drop the `loader`) to bring the landing page back.
+export function Home() {
 	return (
 		<>
 			<main>
