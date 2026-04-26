@@ -1,0 +1,38 @@
+---
+title: ThreeStart
+description: The entry point. Bootstraps the scene, registers modules, and wires everything together.
+---
+
+import doc from './generated/ThreeStart.json'
+
+`ThreeStart` is the entry point of every three-start project. It creates a [`ThreeContext`](/docs/api/three-context), accepts [`ContextModule`](/docs/api/context-module) instances, and bootstraps the entire scene in a defined order when `start()` is called.
+
+```ts
+import { ThreeStart } from "three-start";
+
+const starter = new ThreeStart();
+starter.addModules({ ... });
+starter.start();
+
+starter.mount(document.getElementById("three")!);
+```
+
+<Callout type="warn">
+  `addModules()` must be called **before** `start()`. Modules participate in the bootstrap lifecycle (`onAwake` → `onStart`), so registering after `start()` throws.
+</Callout>
+
+<Callout type="info">
+  `mount()` / `unmount()` can be called any number of times across the instance's lifetime — by default each pair starts and stops the render loop automatically. Pass `manageLoopManually: true` in [`ThreeStartOptions`](#threestartoptions) to disable this and control the loop yourself via `runLoop()` / `stopLoop()`.
+</Callout>
+
+## Initialization
+
+<ApiInit data={doc} />
+
+## Properties
+
+<ApiProperties data={doc} />
+
+## Methods
+
+<ApiMethods data={doc} />

@@ -1,0 +1,273 @@
+{
+  "name": "Object3DBehaviour",
+  "description": "Base class for components attached to a Three.js `Object3D`. Extend it, override lifecycle\nhooks (`onAwake`, `onUpdate`, `onDestroy`, …), and attach via [`addComponent`](/docs/api/operations).\nEvery instance gets `this.object`, the shared [`ThreeContext`](/docs/api/three-context) as\n`this.ctx`, and access to registered [`ContextModule`](/docs/api/context-module) instances via `this.modules`.",
+  "generics": "TEvents extends EventMap = {}",
+  "extends": "TypedEmitter<TEvents>",
+  "properties": [
+    {
+      "name": "object",
+      "type": "THREE.Object3D",
+      "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">THREE</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">.Object3D</span>",
+      "readonly": true,
+      "description": "The Three.js `Object3D` this component is attached to. Available from `onAwake` onwards."
+    },
+    {
+      "name": "ctx",
+      "type": "ThreeContext",
+      "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">ThreeContext</span>",
+      "readonly": true,
+      "description": "The shared [`ThreeContext`](/docs/api/three-context) runtime. Available from `onAwake` onwards."
+    },
+    {
+      "name": "modules",
+      "type": "ThreeStartModules",
+      "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">ThreeStartModules</span>",
+      "readonly": true,
+      "description": "Shortcut to registered [`ContextModule`](/docs/api/context-module) instances: `this.modules.myModule`."
+    },
+    {
+      "name": "enabled",
+      "type": "boolean",
+      "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">boolean</span>",
+      "readonly": true,
+      "description": "`true` while the component is enabled. Toggle with `enable()` / `disable()` / `setEnabled()`."
+    }
+  ],
+  "events": {
+    "emitterMethods": [
+      {
+        "name": "on",
+        "params": [
+          {
+            "name": "event",
+            "type": "K",
+            "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">K</span>"
+          },
+          {
+            "name": "fn",
+            "type": "(...args: TEvents[K]) => void",
+            "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">(</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">...</span><span style=\"--shiki-light:#E36209;--shiki-dark:#FFAB70\">args</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">:</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\"> TEvents</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">[</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\">K</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">]) </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> void</span>"
+          },
+          {
+            "name": "context",
+            "type": "any",
+            "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">any</span>",
+            "optional": true
+          }
+        ],
+        "returns": "this",
+        "returnsHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">this</span>",
+        "signature": "<K extends keyof TEvents>(event: K, fn: (...args: TEvents[K]) => void, context?: any) => this",
+        "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">&#x3C;</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\">K</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> extends</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> keyof</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\"> TEvents</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">>(</span><span style=\"--shiki-light:#E36209;--shiki-dark:#FFAB70\">event</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">:</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\"> K</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">, </span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\">fn</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">:</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\"> (</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">...</span><span style=\"--shiki-light:#E36209;--shiki-dark:#FFAB70\">args</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">:</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\"> TEvents</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">[</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\">K</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">]) </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> void</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">, </span><span style=\"--shiki-light:#E36209;--shiki-dark:#FFAB70\">context</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">?:</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> any</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">) </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> this</span>",
+        "tags": [],
+        "description": "Subscribe to an event declared via the class generic parameter."
+      },
+      {
+        "name": "once",
+        "params": [
+          {
+            "name": "event",
+            "type": "K",
+            "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">K</span>"
+          },
+          {
+            "name": "fn",
+            "type": "(...args: TEvents[K]) => void",
+            "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">(</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">...</span><span style=\"--shiki-light:#E36209;--shiki-dark:#FFAB70\">args</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">:</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\"> TEvents</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">[</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\">K</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">]) </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> void</span>"
+          },
+          {
+            "name": "context",
+            "type": "any",
+            "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">any</span>",
+            "optional": true
+          }
+        ],
+        "returns": "this",
+        "returnsHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">this</span>",
+        "signature": "<K extends keyof TEvents>(event: K, fn: (...args: TEvents[K]) => void, context?: any) => this",
+        "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">&#x3C;</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\">K</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> extends</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> keyof</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\"> TEvents</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">>(</span><span style=\"--shiki-light:#E36209;--shiki-dark:#FFAB70\">event</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">:</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\"> K</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">, </span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\">fn</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">:</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\"> (</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">...</span><span style=\"--shiki-light:#E36209;--shiki-dark:#FFAB70\">args</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">:</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\"> TEvents</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">[</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\">K</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">]) </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> void</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">, </span><span style=\"--shiki-light:#E36209;--shiki-dark:#FFAB70\">context</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">?:</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> any</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">) </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> this</span>",
+        "tags": [],
+        "description": "Subscribe to an event, automatically unsubscribing after it fires once."
+      },
+      {
+        "name": "off",
+        "params": [
+          {
+            "name": "event",
+            "type": "K",
+            "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">K</span>"
+          },
+          {
+            "name": "fn",
+            "type": "(...args: TEvents[K]) => void",
+            "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">(</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">...</span><span style=\"--shiki-light:#E36209;--shiki-dark:#FFAB70\">args</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">:</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\"> TEvents</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">[</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\">K</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">]) </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> void</span>",
+            "optional": true
+          },
+          {
+            "name": "context",
+            "type": "any",
+            "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">any</span>",
+            "optional": true
+          },
+          {
+            "name": "once",
+            "type": "boolean",
+            "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">boolean</span>",
+            "optional": true
+          }
+        ],
+        "returns": "this",
+        "returnsHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">this</span>",
+        "signature": "<K extends keyof TEvents>(event: K, fn?: (...args: TEvents[K]) => void, context?: any, once?: boolean) => this",
+        "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">&#x3C;</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\">K</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> extends</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> keyof</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\"> TEvents</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">>(</span><span style=\"--shiki-light:#E36209;--shiki-dark:#FFAB70\">event</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">:</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\"> K</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">, </span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\">fn</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">?:</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\"> (</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">...</span><span style=\"--shiki-light:#E36209;--shiki-dark:#FFAB70\">args</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">:</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\"> TEvents</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">[</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\">K</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">]) </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> void</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">, </span><span style=\"--shiki-light:#E36209;--shiki-dark:#FFAB70\">context</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">?:</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> any</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">, </span><span style=\"--shiki-light:#E36209;--shiki-dark:#FFAB70\">once</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">?:</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> boolean</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">) </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> this</span>",
+        "tags": [],
+        "description": "Remove a previously registered listener. Omit `fn` to remove all listeners for the event."
+      }
+    ],
+    "isGeneric": true
+  },
+  "methods": [
+    {
+      "name": "enable",
+      "params": [],
+      "returns": "void",
+      "returnsHtml": "<span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">void</span>",
+      "signature": "() => void",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">() </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> void</span>",
+      "tags": [],
+      "description": "Enable the component. Fires `onEnable` if the owning object is active and the context is available."
+    },
+    {
+      "name": "disable",
+      "params": [],
+      "returns": "void",
+      "returnsHtml": "<span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">void</span>",
+      "signature": "() => void",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">() </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> void</span>",
+      "tags": [],
+      "description": "Disable the component. Fires `onDisable` if it was active and unsubscribes per-frame hooks."
+    },
+    {
+      "name": "setEnabled",
+      "params": [
+        {
+          "name": "enabled",
+          "type": "boolean",
+          "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">boolean</span>"
+        }
+      ],
+      "returns": "void",
+      "returnsHtml": "<span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">void</span>",
+      "signature": "(enabled: boolean) => void",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">(</span><span style=\"--shiki-light:#E36209;--shiki-dark:#FFAB70\">enabled</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">:</span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> boolean</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">) </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> void</span>",
+      "tags": [],
+      "description": "Set the enabled flag explicitly. No-op if the value is unchanged."
+    }
+  ],
+  "lifecycle": [
+    {
+      "name": "onAwake",
+      "params": [],
+      "returns": "void",
+      "returnsHtml": "<span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">void</span>",
+      "signature": "() => void",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">() </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> void</span>",
+      "tags": [
+        "lifecycle",
+        "override"
+      ],
+      "description": "Called once when the component first becomes active. Use for one-time initialization. Runs before `onEnable` and `onStart`."
+    },
+    {
+      "name": "onStart",
+      "params": [],
+      "returns": "void",
+      "returnsHtml": "<span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">void</span>",
+      "signature": "() => void",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">() </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> void</span>",
+      "tags": [
+        "lifecycle",
+        "override"
+      ],
+      "description": "Called once after `onEnable`, on the first activation. Runs after all modules and sibling components have awakened."
+    },
+    {
+      "name": "onEnable",
+      "params": [],
+      "returns": "void",
+      "returnsHtml": "<span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">void</span>",
+      "signature": "() => void",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">() </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> void</span>",
+      "tags": [
+        "lifecycle",
+        "override"
+      ],
+      "description": "Called every time the component transitions from disabled → enabled. Also runs on the first activation (after `onAwake`)."
+    },
+    {
+      "name": "onDisable",
+      "params": [],
+      "returns": "void",
+      "returnsHtml": "<span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">void</span>",
+      "signature": "() => void",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">() </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> void</span>",
+      "tags": [
+        "lifecycle",
+        "override"
+      ],
+      "description": "Called every time the component transitions from enabled → disabled, and before `onDestroy`."
+    },
+    {
+      "name": "onUpdate",
+      "params": [],
+      "returns": "void",
+      "returnsHtml": "<span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">void</span>",
+      "signature": "() => void",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">() </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> void</span>",
+      "tags": [
+        "lifecycle",
+        "override"
+      ],
+      "description": "Called once per frame while the component is active. Override to run per-frame logic."
+    },
+    {
+      "name": "onBeforeRender",
+      "params": [],
+      "returns": "void",
+      "returnsHtml": "<span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">void</span>",
+      "signature": "() => void",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">() </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> void</span>",
+      "tags": [
+        "lifecycle",
+        "override"
+      ],
+      "description": "Called once per frame, before the scene is rendered. Override to run pre-render logic."
+    },
+    {
+      "name": "onAfterRender",
+      "params": [],
+      "returns": "void",
+      "returnsHtml": "<span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">void</span>",
+      "signature": "() => void",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">() </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> void</span>",
+      "tags": [
+        "lifecycle",
+        "override"
+      ],
+      "description": "Called once per frame, after the scene is rendered. Override to run post-render logic."
+    },
+    {
+      "name": "onDestroy",
+      "params": [],
+      "returns": "void",
+      "returnsHtml": "<span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">void</span>",
+      "signature": "() => void",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">() </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\"> void</span>",
+      "tags": [
+        "lifecycle",
+        "override"
+      ],
+      "description": "Called when the component is destroyed. Use to dispose resources, cancel requests, or remove external listeners."
+    }
+  ]
+}

@@ -1,0 +1,111 @@
+---
+title: ContextModule
+description: Base class for global systems — input, physics, assets, audio. Same lifecycle as components, accessible from anywhere.
+---
+
+import doc from './generated/ContextModule.json'
+
+`ContextModule` is the base class for global systems. Extend it to implement input handling, physics, asset loading, audio, or any other system that needs to live outside of individual objects but participate in the scene lifecycle.
+
+<Callout type="info">
+  Register modules via [`addModules()`](/docs/api/three-start) on a [`ThreeStart`](/docs/api/three-start) instance, **before** `start()`. Once registered, they're accessible from any [`Object3DBehaviour`](/docs/api/object3d-behaviour) or sibling module via `this.modules.<key>`.
+</Callout>
+
+```ts
+import { ContextModule, ThreeStart } from "three-start";
+
+class InputModule extends ContextModule {
+  readonly keys = new Set<string>();
+
+  onAwake() {
+    window.addEventListener("keydown", (e) => this.keys.add(e.code));
+    window.addEventListener("keyup", (e) => this.keys.delete(e.code));
+  }
+
+  isPressed(key: string) {
+    return this.keys.has(key);
+  }
+}
+
+const starter = new ThreeStart().addModules({ input: new InputModule() });
+```
+
+```ts
+// Inside any component:
+onUpdate() {
+  if (this.modules.input.isPressed("Space")) { ... }
+}
+```
+
+Lifecycle order during [`starter.start()`](/docs/api/three-start): `onAwake` (all modules) → `onStart` (all modules) → subscribe — **before any [`Object3DBehaviour`](/docs/api/object3d-behaviour) lifecycle fires**.
+
+## Properties
+
+<ApiProperties data={doc} />
+
+## Methods
+
+<ApiMethods data={doc} />
+
+## Override methods
+
+Lifecycle hooks you implement in your subclass.
+
+<Callout type="info">
+  Per-frame hooks (`onUpdate`, `onBeforeRender`, `onAfterRender`) are subscribed to the runtime loop **only if you override them**. An empty module pays nothing for dispatch.
+</Callout>
+
+<ApiLifecycle data={doc} />
+
+## Events
+
+`ContextModule` extends [`TypedEmitter`](/docs/api/typed-emitter) — declare your own event map via the generic parameter to expose typed events to subscribers (other modules, UI, etc.).
+
+<ApiEvents data={doc} />
+
+### Declaring events in your subclass
+
+Pass a typed event map as the generic parameter. Keys become the `event` argument in `on` / `off` / `once`, and tuple values type the listener payload. `emit` is `protected` — only the module itself can fire its own events.
+
+```ts
+type GameEvents = {
+  scoreChanged: [score: number];
+  gameOver: [finalScore: number];
+};
+
+class GameModule extends ContextModule<GameEvents> {
+  score = 0;
+
+  addScore(points: number) {
+    this.score += points;
+    this.emit("scoreChanged", this.score);  // ✅ inside the class
+  }
+
+  endGame() {
+    this.emit("gameOver", this.score);      // ✅
+  }
+}
+
+// Subscribe from another module or component:
+this.modules.game.on("scoreChanged", (score) => updateHud(score));
+this.modules.game.emit("gameOver", 0);     // ❌ compile error: emit is protected
+```
+
+The default for the generic is `{}` — without declaring events, calling `on` / `emit` fails at compile time (`keyof {} = never`).
+
+## Type-safe modules
+
+Use the Register pattern to get typed access to your modules:
+
+```ts
+declare module "three-start" {
+  interface ThreeStartRegister {
+    modules: {
+      input: InputModule;
+      physics: PhysicsModule;
+    };
+  }
+}
+```
+
+After this, `this.modules.input` and `this.modules.physics` are fully typed everywhere.

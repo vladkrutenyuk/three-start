@@ -1,0 +1,258 @@
+---
+title: Quick Start
+description: Three core concepts of three-start in five minutes — components, modules, and lifecycle control.
+---
+
+Three concepts cover almost everything you'll write with three-start:
+
+1. **Components** — pieces of behaviour you attach to a `THREE.Object3D` ([`Object3DBehaviour`](/docs/api/object3d-behaviour)).
+2. **Modules** — global systems that live on the context ([`ContextModule`](/docs/api/context-module)).
+3. **Control** — turning behaviour on/off without ripping objects out of the scene.
+
+This page walks through each, then ends with a tiny demo that uses all three together.
+
+## Bootstrap
+
+```ts
+import * as THREE from "three/webgpu";
+import { ThreeStart } from "three-start";
+
+const starter = new ThreeStart();
+
+starter.mount(document.getElementById("app")!);
+starter.start();
+```
+
+That's the minimum. `starter.ctx` exposes the renderer, scene, camera, and event bus — see [`ThreeContext`](/docs/api/three-context).
+
+<Callout type="info">
+  `mount()` and `start()` are independent — call them in any order. `mount()` controls the canvas + render loop; `start()` runs the bootstrap that wakes registered modules and components.
+</Callout>
+
+## 1. Components — extend `Object3DBehaviour`
+
+A component is a class that extends [`Object3DBehaviour`](/docs/api/object3d-behaviour) and overrides whichever lifecycle hooks it needs. Inside, `this.object` is the Three.js object it's attached to, `this.ctx` is the shared runtime.
+
+```ts
+import { Object3DBehaviour, addComponent } from "three-start";
+
+class Spin extends Object3DBehaviour {
+  speed = 1;
+
+  onAwake() {                                 // [!code highlight]
+    // one-time setup
+  }
+
+  onUpdate() {                                // [!code highlight]
+    const dt = this.ctx.getDeltaTime();
+    this.object.rotation.y += this.speed * dt;
+  }
+
+  onDestroy() {                               // [!code highlight]
+    // cleanup if needed
+  }
+}
+
+const cube = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshNormalMaterial());
+starter.ctx.scene.add(cube);
+
+addComponent(cube, Spin);                     // attach
+```
+
+Lifecycle in short: `onAwake` (once) → `onEnable` → `onStart` (once) → `onUpdate` / `onBeforeRender` / `onAfterRender` (per frame) → `onDisable` → `onDestroy`.
+
+<Callout type="info">
+  Per-frame hooks are subscribed **only if you override them** — a component without `onUpdate` pays nothing for dispatch. See [`Object3DBehaviour`](/docs/api/object3d-behaviour) for the full lifecycle.
+</Callout>
+
+### Querying and removing
+
+```ts
+import { getComponent, getComponents, destroy } from "three-start";
+
+const spin = getComponent(cube, Spin);          // first match, or null
+const allSpins = getComponents(cube, Spin);     // all matches
+const everything = getComponents(cube);         // every behaviour on cube
+
+destroy(spin!);   // remove just this component (fires onDisable → onDestroy)
+destroy(cube);    // remove the whole object + every component on it / its descendants
+```
+
+## 2. Modules — extend `ContextModule`
+
+A module is a singleton that lives on the context. Use it for anything global — input, physics, asset loading, audio, scoring. It has the same lifecycle hooks as components (minus the `onEnable`/`onDisable`/`onDestroy` set, since modules are always on).
+
+```ts
+import { ContextModule, ThreeStart } from "three-start";
+
+class InputModule extends ContextModule {
+  private keys = new Set<string>();
+
+  onAwake() {                                 // [!code highlight]
+    window.addEventListener("keydown", (e) => this.keys.add(e.code));
+    window.addEventListener("keyup", (e) => this.keys.delete(e.code));
+  }
+
+  isPressed(code: string) {
+    return this.keys.has(code);
+  }
+}
+```
+
+Register modules on the starter **before** calling `start()`:
+
+```ts
+const starter = new ThreeStart()
+  .addModules({ input: new InputModule() });    // [!code highlight]
+```
+
+<Callout type="warn">
+  Modules can only be registered before `start()`. After bootstrap, `addModules` throws — the lifecycle has already run.
+</Callout>
+
+### Type-safe access from anywhere
+
+Augment the registry once, and `this.modules.input` becomes fully typed in every component and other module:
+
+```ts
+declare module "three-start" {
+  interface ThreeStartRegister {
+    modules: {
+      input: InputModule;
+    };
+  }
+}
+```
+
+Now any component can read it via `this.modules.input`:
+
+```ts
+class PlayerControl extends Object3DBehaviour {
+  speed = 5;
+  onUpdate() {
+    const dt = this.ctx.getDeltaTime();
+    if (this.modules.input.isPressed("KeyD")) this.object.position.x += this.speed * dt;
+    if (this.modules.input.isPressed("KeyA")) this.object.position.x -= this.speed * dt;
+  }
+}
+```
+
+## 3. Control — `setActive`, `enable` / `disable`, `destroy`
+
+Three levels of control, smallest to largest scope:
+
+| API                       | What it does                                                                                          |
+|---------------------------|-------------------------------------------------------------------------------------------------------|
+| `comp.disable()` / `enable()` | Toggle a single component on/off. Other components on the same object keep running.               |
+| `setActive(obj, false)`   | Freeze the entire object subtree. Every component on it (and its descendants) goes through `onDisable`. Reverse with `setActive(obj, true)`. (`setActive` doesn't touch `obj.visible` — set that yourself if you also want the subtree to stop rendering.) |
+| `destroy(comp)` / `destroy(obj)` | Permanent removal. Fires `onDestroy`; the component / object is gone.                            |
+
+```ts
+import { setActive, getIsActive } from "three-start";
+
+const ctrl = getComponent(player, PlayerControl)!;
+
+ctrl.disable();              // player stops moving but stays visible/animated by other components
+ctrl.enable();               // resumes
+
+setActive(player, false);    // freeze the whole player branch (pause menu)
+setActive(player, true);     // unfreeze
+getIsActive(player);         // → true
+```
+
+<Callout type="info">
+  `setActive` is the right choice for **pausing a subtree** (a paused enemy, a hidden room). `disable`/`enable` is for **temporarily turning off one behaviour** (mute a behaviour while another is in charge). `destroy` is for **permanent removal**.
+</Callout>
+
+## Putting it together
+
+A self-contained example combining all three concepts. WASD moves the cube; pressing `P` toggles pause via `setActive`.
+
+```ts title="main.ts"
+import * as THREE from "three/webgpu";
+import {
+  ThreeStart,
+  Object3DBehaviour,
+  ContextModule,
+  addComponent,
+  getComponent,
+  setActive,
+  getIsActive,
+} from "three-start";
+
+// ── 1. Module: keyboard input ───────────────────────────────────────────
+class InputModule extends ContextModule {
+  private keys = new Set<string>();
+  private justPressed = new Set<string>();
+
+  onAwake() {
+    window.addEventListener("keydown", (e) => {
+      if (!this.keys.has(e.code)) this.justPressed.add(e.code);
+      this.keys.add(e.code);
+    });
+    window.addEventListener("keyup", (e) => this.keys.delete(e.code));
+  }
+
+  /** Called automatically before any component's onUpdate. */
+  onUpdate() {
+    this.justPressed.clear();
+  }
+
+  isPressed(code: string) { return this.keys.has(code); }
+  wasJustPressed(code: string) { return this.justPressed.has(code); }
+}
+
+declare module "three-start" {
+  interface ThreeStartRegister {
+    modules: { input: InputModule };
+  }
+}
+
+// ── 2. Component: read input, move object ───────────────────────────────
+class PlayerControl extends Object3DBehaviour {
+  speed = 5;
+
+  onUpdate() {
+    const dt = this.ctx.getDeltaTime();
+    const k = this.modules.input;
+    if (k.isPressed("KeyD")) this.object.position.x += this.speed * dt;
+    if (k.isPressed("KeyA")) this.object.position.x -= this.speed * dt;
+    if (k.isPressed("KeyW")) this.object.position.z -= this.speed * dt;
+    if (k.isPressed("KeyS")) this.object.position.z += this.speed * dt;
+  }
+}
+
+// ── 3. Bootstrap ────────────────────────────────────────────────────────
+const starter = new ThreeStart()
+  .addModules({ input: new InputModule() });
+
+const player = new THREE.Mesh(
+  new THREE.BoxGeometry(),
+  new THREE.MeshNormalMaterial(),
+);
+starter.ctx.scene.add(player);
+starter.ctx.camera.position.set(0, 5, 10);
+starter.ctx.camera.lookAt(player.position);
+
+addComponent(player, PlayerControl);
+
+starter.mount(document.getElementById("app")!);
+starter.start();
+
+// ── 4. Pause / resume on `P` ────────────────────────────────────────────
+window.addEventListener("keydown", (e) => {
+  if (e.code !== "KeyP") return;
+  setActive(player, !getIsActive(player));    // [!code highlight]
+});
+
+// ── 5. Demonstrate per-component control ────────────────────────────────
+const ctrl = getComponent(player, PlayerControl)!;
+ctrl.disable();   // input stops being read — but the cube still renders
+ctrl.enable();    // back to controllable
+```
+
+That's the whole loop:
+
+- `InputModule` provides global state any component can read.
+- `PlayerControl` is per-object behaviour reading from the module.
+- `setActive`, `disable`/`enable`, and `destroy` form a control toolkit at three different scopes.

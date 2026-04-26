@@ -1,0 +1,413 @@
+---
+title: Internals
+description: Technical reference for maintainers/contributors. Covers state, lifecycle phases, the bootstrap gate, and ordering guarantees provided by the core.
+---
+
+## Entities
+
+| Entity | Location | Role |
+|---|---|---|
+| `ThreeStart` | `ThreeStart.ts` | Orchestrator. Owns the single `ThreeContext`. Owns lifecycle (mount/runLoop/stopLoop/unmount/dispose). Owns module registration and the `start()` bootstrap. |
+| `ThreeContext` | `ThreeContext.ts` | Per-scene runtime: renderer, scene, camera, timer, render pipeline, event bus (extends `TypedEmitter`), modules registry. Exposed to behaviours/modules via `this.ctx`. Lifecycle methods (`mount`/`unmount`/`runLoop`/`stopLoop`/`dispose`) are `@internal` — only called by `ThreeStart` wrappers. |
+| `Object3DExtension` | `Object3DExtension.ts` | Per-`Object3D` sidecar: list of attached `Object3DBehaviour`s, cached `ThreeContext` pointer, own active flag (`activeSelf`), `activeInHierarchy` getter, cascade traversal helpers. |
+| `Object3DBehaviour` | `Object3DBehaviour.ts` | User-defined component attached to an `Object3D`. Has full lifecycle. |
+| `ContextModule` | `ContextModule.ts` | User-defined global singleton attached to the context. Has a subset of lifecycle. |
+| `TypedEmitter` | `TypedEmitter.ts` | Tiny base providing `on`/`off`/`once` (public) and `emit` (protected). Wraps `eventemitter3` lazily — inner emitter is allocated on first subscription, so unused emitters cost only one nullable slot. Extended by `ThreeContext`, `ContextModule`, `Object3DBehaviour`. |
+| Operations | `methods.ts` | Top-level imperative functions: `addComponent`, `getComponent`, `getComponents`, `setActive`, `getIsActive`, `getIsActiveSelf`, `destroy`, plus re-export of `attachContext`. All delegate into `Object3DExtension`. |
+
+## Object3DExtension attachment
+
+- Stored on the Three.js `Object3D` under the non-enumerable symbol `EXT = Symbol.for("three-start:ext")`.
+- Created lazily by `ensureExtension(obj)`. Read by `getExtension(obj)` (returns `null` if missing).
+- `attachContext(obj, ctx)` calls `ensureExtension(obj)` and assigns `ext.context = ctx`. In normal flow this is done exactly once on the scene root by `ThreeStart.start()`.
+
+## Context resolution
+
+`Object3DExtension.resolveContext()` walks up the `.parent` chain looking for the first ancestor whose extension has `.context` set, caches the result on `this.context`, and returns it. A component inside the scene therefore shares the context of whatever ancestor has it attached — in practice the scene root, after `ThreeStart.start()` has run.
+
+A component whose object is not yet in a hierarchy with an attached context has `resolveContext() === null`. It is stored on the extension but remains dormant (no `_ctx`, no `_activate` call) until the object joins such a hierarchy.
+
+## Component state flags
+
+| Field | Meaning |
+|---|---|
+| `_object` | Back-pointer to the `Object3D`. `null` after `_destroy()`. |
+| `_ext` | Back-pointer to the owning `Object3DExtension`. |
+| `_ctx` | `ThreeContext` once resolved; `null` before that. |
+| `_awoken` | `true` after `onAwake` has fired. Never reset. |
+| `_started` | `true` after `onStart` has fired. Never reset. |
+| `_isActive` | `true` while the component is currently subscribed to ctx events. Set by `_activate` / cleared by `_deactivate`. Tracks the effective lifecycle state (object's `activeInHierarchy` AND component's `enabled`). |
+| `_enabled` (private) | User-facing `enabled` flag, controlled via `enable()`/`disable()`/`setEnabled()`. |
+
+## Extension state
+
+| Field | Meaning |
+|---|---|
+| `components` | Array of `Object3DBehaviour`s in insertion order. |
+| `context` | The `ThreeContext` this subtree is bound to, or `null` if unresolved. |
+| `_active` | The object's own active flag. Default `true`. Toggled via `setActive(active)`. Whether components actually run depends on the full chain — see `activeInHierarchy` below and the [Cascade algorithm](#cascade-algorithm). |
+| `activeSelf` getter | Reads `_active`. Public accessor for the own flag. |
+| `activeInHierarchy` getter | `_active` AND every ancestor's `activeSelf` is true. Computed via `parentChainActive(this.object)` walk. |
+
+## Context state
+
+`ThreeContext` keeps a few internal slots beyond the public surface:
+
+- `_isBootstrapping: boolean` — `true` only during `ThreeStart.start()` Phase 0 (module bootstrap). Read by `Object3DExtension.addComponent` to decide whether to defer activation. `@internal`, stripped from `.d.ts` output.
+- `_modules: Record<string, ContextModule>` — the actual mutable backing store for registered modules. Only `_registerModule(key, instance)` writes to it.
+- `_renderFn / _srcRenderFn` — the current render function and the original. `overrideRender(fn)` swaps `_renderFn`; `resetRender()` restores from `_srcRenderFn`.
+- `_timer: THREE.Timer` — drives `getDeltaTime` / `getTime` / `getTimescale` / `setTimescale`. Connected to `document` on `runLoop`, disconnected/reset on `stopLoop`.
+- `_camera`, `_canvasContainer`, `_resizeObserver`, `_isMounted`, `_isLoopRunning`, `_requestAnimationFrame` — backing state for the corresponding getters / lifecycle methods.
+
+## Sealed runtime fields
+
+`ThreeContext` constructor uses `defineProps + readOnly` to make the following fields **non-writable** and **non-configurable** at runtime, in addition to the TS `readonly` modifier:
+
+- `isThreeContext` (discriminator marker)
+- `modules` (the Proxy view, see below)
+- `renderer`, `scene`, `scenePass`, `renderPipeline`
+
+Result: `ctx.scene = otherScene`, `ctx.renderer = fake`, `ctx.modules = {}` all throw `TypeError`. This is hard runtime protection against third-party module/component code rebinding core context state. The TS `readonly` modifier alone is bypassable via `as any`; `defineProperty(..., { writable: false, configurable: false })` is not.
+
+## Modules registry — read-only Proxy view
+
+The public `ctx.modules` field is **not** the backing store directly. It is a `Proxy` over `this._modules` whose only allowed operation is reads:
+
+```
+get → forwards to target (default trap)
+set / deleteProperty / defineProperty / setPrototypeOf → throw
+```
+
+The Proxy is built via `createReadonlyView(this._modules, "ctx.modules")` (in `utils/define-props.ts`), then sealed onto the instance via `defineProps(this, { modules: readOnly(view) })`.
+
+The only legitimate way to add modules is `ctx._registerModule(key, instance)` — `@internal`, called by `ThreeStart.addModules()`. It writes to the Proxy's target (`_modules`) directly, bypassing the readonly view, and returns `false` if the key already exists.
+
+Threat model: third-party plugin code might try `ctx.modules.foo = bar` (typo, malice, or to monkey-patch). All such mutations throw with a clear error. `addModules()` remains the only path.
+
+## `ThreeStart.start()` phases
+
+A single idempotent call, guarded by `this._started`.
+
+```
+attachContext(root, ctx)
+
+ctx._isBootstrapping = true      ← gate ON
+  for m of modules: m._ctx = ctx
+  for m of modules: m.onAwake()
+  for m of modules: m.onStart()
+  for m of modules: m._subscribe()
+ctx._isBootstrapping = false     ← gate OFF
+
+Phase 1 (traverseActiveSelf): for every component on every active-in-hierarchy object
+  ensure comp._ctx, call onAwake (once)
+
+Phase 2 (traverseActiveSelf): for every component on every active-in-hierarchy object
+  if enabled: comp._activate()
+
+listenForChildren(root)          ← wire childadded for dynamic additions
+```
+
+## Bootstrap gate
+
+While `ctx._isBootstrapping === true`, `Object3DExtension.addComponent` performs its usual work — instantiates the component, sets `_object`/`_ext`/`_ctx`, pushes onto `ext.components` — but **skips** the `_activate()` call. The component lies dormant until Phase 1/2 traversal awakens and activates it.
+
+Why: a module's `onAwake`/`onStart` may freely add Three.js objects with components attached (directly or via helper methods). Without the gate, those components would auto-activate mid-bootstrap and subscribe to ctx events **before** modules finish their own subscription step. The gate guarantees modules are always earlier in the `eventemitter3` listener list than any component activated during or after bootstrap.
+
+The gate is not exposed publicly; `addComponent` reads it via `this.context?._isBootstrapping`. `addComponent` never activates across contexts.
+
+## Module lifecycle
+
+Modules have a strict subset of `Object3DBehaviour`'s lifecycle:
+
+```
+onAwake   — self-init; other modules may not yet have awoken
+onStart   — cross-module setup; all modules have been onAwake'd
+onUpdate
+onBeforeRender
+onAfterRender
+```
+
+No `onEnable`/`onDisable` (modules are always on once registered) and no `onDestroy` (the core does not dispose modules; the user tears down via `ctx.dispose()` manually).
+
+Per-frame handlers are only subscribed if the subclass overrides the method. `ContextModule._subscribe` compares each handler against the prototype's no-op body (`this.onUpdate !== proto().onUpdate`) and calls `ctx.on(...)` only for overridden methods. `_unsubscribe` mirrors this with `ctx.off(...)`.
+
+## Component lifecycle
+
+Full lifecycle, per instance:
+
+```
+onAwake   (once, ever)
+onEnable  (every (re)activation)
+onStart   (once, ever)
+onUpdate / onBeforeRender / onAfterRender  (per frame while active)
+onDisable (every deactivation)
+onDestroy (once, at destroy)
+```
+
+Implemented in `Object3DBehaviour._activate()`:
+
+```
+if already active: return
+if no ctx: return
+_isActive = true
+if !_awoken:  _awoken = true;  onAwake()
+onEnable()
+if !_started: _started = true; onStart()
+_subscribe()
+```
+
+Subscription is last, so a component's per-frame method can never fire before its own `onStart`.
+
+`_deactivate()` calls `_unsubscribe()` + `onDisable()` and flips `_isActive = false`. `_destroy()` calls `_deactivate()`, then `onDestroy()`, then `_removeAllListeners()` on the inner emitter (provided by `TypedEmitter`), then nulls out back-pointers.
+
+## When does a component activate?
+
+`Object3DExtension.addComponent` activates immediately iff **all** are true:
+
+1. `component._ctx` resolved (object is in a hierarchy with attached ctx)
+2. `ext.activeInHierarchy` (the extension's own flag is true AND no ancestor was `setActive(false)`'d)
+3. `component.enabled`
+4. `!ctx._isBootstrapping` (not inside `ThreeStart.start()` Phase 0)
+
+If any condition fails, the component is still appended to `ext.components`. It will be activated later by:
+
+- Phase 2 of `start()` — when bootstrap finishes.
+- `childadded` flow — when the object joins a hierarchy with ctx (see below).
+- `ext.setActive(true)` — if the extension was inactive (or an ancestor's cascade reaches the object).
+- `comp.enable()` — if the component was disabled.
+
+## Dynamic additions after `start()`
+
+`ThreeStart.listenForChildren(obj)` registers a `childadded` listener on `obj` and every existing descendant. On event, `onChildAdded` traverses the new subtree with `_callback(node)`:
+
+```
+_callback(node):
+  ext = getExtension(node)
+  if ext && !ext.context: ext.resolveContext()
+  bootstrapNode(node)
+  node.addEventListener("childadded", onChildAdded)  ← keep chain alive
+```
+
+`bootstrapNode(node)` resolves context if missing, then for each enabled component calls `_activate()`. Since bootstrap is already done (gate is off), activation is immediate and components subscribe in the natural order: after existing subscribers.
+
+This means: dynamically spawning objects during gameplay (e.g. from a module's `onUpdate`) activates their components immediately, with subscription order equal to insertion order.
+
+## `setActive` and `visible`
+
+`setActive` is **lifecycle-only**: it controls whether components run, nothing more. It does NOT mutate `object.visible`. Hiding a deactivated subtree from rendering is the caller's responsibility — set `obj.visible = false` yourself if that's what you want; Three.js cascades the flag through descendants at render time.
+
+This was a deliberate change from an earlier design that overrode `Object3D.prototype.visible` via `defineProperty`. The override coupled two unrelated concerns (lifecycle vs. rendering) and was surprising for users who expected `visible` to mean exactly what Three.js says it means. Decoupling them keeps the lib's mutation surface small and predictable.
+
+## Cascade algorithm
+
+`setActive(obj, ...)` exposes two notions of active: `activeSelf` (the own flag) and `activeInHierarchy` (own AND every ancestor active). Public surface in `methods.ts`:
+
+| Function | Returns / does |
+|---|---|
+| `setActive(obj, active)` | Sets `obj`'s `activeSelf`. Cascades through the subtree (see below). |
+| `getIsActive(obj)` | `activeInHierarchy` (own + chain). For objects without an extension, treats as `true`. |
+| `getIsActiveSelf(obj)` | `activeSelf` (own flag). For objects without an extension, returns `true` (default). |
+
+Helpers exported from `Object3DExtension.ts` (all `@internal`):
+
+- `parentChainActive(obj)` — walks `obj.parent` up to the scene root; returns `false` if any ancestor's `activeSelf` is `false`. Ancestors with no extension count as active. `obj` itself is **not** checked.
+- `isActiveInHierarchy(obj)` — combines `getExtension(obj)?.activeSelf ?? true` with `parentChainActive(obj)`.
+- `traverseActiveSelf(root, cb)` — walks `root` and descendants, invokes `cb` on each node whose own `activeSelf` is true (or that has no extension), pruning at any inactive node. Caller must guarantee `root`'s parent chain is active.
+
+`Object3DExtension.setActive(active)` algorithm:
+
+```
+if (this._active === active) return;             ← idempotence
+this._active = active;
+
+if (!parentChainActive(this.object)) return;     ← chain wasn't active, nothing to cascade
+
+if (active) activateSubtree(this.object);
+else        deactivateSubtree(this.object);
+```
+
+The chain check is the key invariant: if any ancestor was already inactive, this object's effective state didn't change (it was inactive before the flip, it's inactive after) — so no components need to be (de)activated. The flag is recorded on `_active`; the cascade fires only when crossing the effective-state boundary.
+
+`activateSubtree(root)` and `deactivateSubtree(root)` (private to `Object3DExtension.ts`):
+
+```
+activateSubtree(root):
+  // root.activeSelf is now true → traverseActiveSelf descends through it.
+  traverseActiveSelf(root, activateNode)
+
+deactivateSubtree(root):
+  // root.activeSelf was just set to false; traverseActiveSelf would stop at root.
+  // Process root explicitly, then descend into each child via traverseActiveSelf.
+  deactivateNode(root)
+  for c of root.children: traverseActiveSelf(c, deactivateNode)
+```
+
+`activateNode(node)` resolves context if missing, then for each component on the node assigns `comp._ctx` (if unset) and calls `_activate()` if `enabled`. `deactivateNode(node)` calls `_deactivate()` on every currently `_isActive` component.
+
+Awake/start flags (`_awoken`, `_started`) are never reset. Subsequent activations re-fire only `onEnable` and render loop event methods — `onAwake` and `onStart` stay one-shot per instance.
+
+The cascade prunes at any descendant whose own `activeSelf` is `false` — that subtree was already effectively inactive and stays so even after the ancestor flips on. To bring a pruned subtree back, call `setActive` on its own root.
+
+## Event subscription order
+
+`eventemitter3` dispatches listeners in registration order. The core guarantees:
+
+| Order of subscription within `ctx` | When |
+|---|---|
+| Module handlers | Last step of Phase 0 in `start()` |
+| Component handlers activated in Phase 2 | After all modules subscribed |
+| Component handlers activated via `childadded` | After Phase 2 finished, at add time |
+| Component handlers from `enable()` or `setActive(true)` | At call time, appended to end |
+
+Per-frame handler order at emit time therefore reflects:
+
+```
+modules (in registration order) → components activated in Phase 2 (traversal order)
+→ dynamically added components (chronological)
+```
+
+## Ordering guarantees provided
+
+1. `module.onAwake` and `module.onStart` always run before **any** `component.onAwake`/`onStart`.
+2. A module's per-frame handlers always run before its corresponding `component` handlers within the same tick (for all components activated during or before the module's subscription).
+3. A module's per-frame handlers cannot fire before the module's own `onStart`, even if user code manually emits `Update`/`RenderBefore`/`RenderAfter` during initialization — subscription is strictly the last step of module bootstrap.
+4. A component's per-frame handlers cannot fire before its own `onStart` — subscription is the last step of `_activate()`.
+5. `onAwake` fires exactly once per component instance. `onStart` fires exactly once per component instance. Toggling enabled/active re-fires only `onEnable`/`onDisable`.
+
+## Modules registry — registration flow
+
+- `ThreeContext.modules` is a sealed read-only Proxy (see "Modules registry — read-only Proxy view" above), typed as `ThreeStartModules` (Register-pattern extensible). The backing `_modules` store is initialized to `{}` at construction.
+- `ThreeStart.addModules(map)` is the **only** public registration entry. It iterates the map and calls `ctx._registerModule(key, instance)` per entry.
+- `addModules` throws if `this._started` is `true` (cannot register modules after bootstrap). Duplicate keys log `console.warn` and skip — `_registerModule` returns `false` to signal the skip.
+- Consumers read modules via `this.ctx.modules`, `this.modules` (behaviour), or `this.modules` (module). The latter two are getters that delegate to `this._ctx!.modules`.
+
+## Register pattern
+
+`Register.ts` defines:
+
+```ts
+export interface ThreeStartRegister {}
+export type RegisterField<K extends string, Fallback = unknown> =
+  K extends keyof ThreeStartRegister ? ThreeStartRegister[K] : Fallback;
+```
+
+`ThreeStartModules = RegisterField<"modules", Record<string, ContextModule>>` resolves to the strongly-typed module map when the consumer augments `ThreeStartRegister["modules"]`, or falls back to the loose record type otherwise.
+
+The same Register interface is the extension point for any future strongly-typed registries (e.g. typed events, typed components). Consumers augment via standard module augmentation:
+
+```ts
+declare module "three-start" {
+  interface ThreeStartRegister {
+    modules: { input: InputModule; physics: PhysicsModule };
+  }
+}
+```
+
+Beyond `ThreeStartRegister`, three-start's exported classes (`Object3DBehaviour`, `ContextModule`, `ThreeContext`) are also valid targets for declaration merging. A user can extend their instance interface with optional methods:
+
+```ts
+declare module "three-start" {
+  interface Object3DBehaviour {
+    onPointerDown?(e: PointerEvent): void;
+  }
+}
+```
+
+This adds the optional method to the instance type of every subclass — letting a custom dispatcher module call `comp.onPointerDown?.(event)` with full type safety, without library-side changes.
+
+## Cycles and module load order
+
+The core has two latent type-level cycles, both kept harmless by `import type`:
+
+1. **`ContextModule.ts` ↔ `ThreeContext.ts`**
+   - `ContextModule.ts` imports `ThreeContextEvents` (enum — **value**) from `ThreeContext.ts`. Runtime dependency.
+   - `ContextModule.ts` also imports `type ThreeContext` (type only). Erased.
+   - `ThreeContext.ts` imports `type ContextModule, ThreeStartModules` from `ContextModule.ts`. Type-only — erased.
+   - Actual load order: `ThreeContext.ts` first, `ContextModule.ts` second.
+
+2. **`ThreeContext.ts` ↔ `ThreeStart.ts`**
+   - `ThreeStart.ts` imports `ThreeContext` (class — **value**) from `ThreeContext.ts`. Runtime.
+   - `ThreeContext.ts` imports `type ThreeStartOptions` from `ThreeStart.ts`. Type-only — erased.
+   - Actual load order: `ThreeContext.ts` first, `ThreeStart.ts` second.
+
+**Do not turn any of these type imports into value imports.** Doing so creates a real ESM cycle and at minimum spawns hard-to-debug undefined references at module init.
+
+## Lifecycle ownership: ThreeStart vs ThreeContext
+
+`ThreeContext` exposes lifecycle methods `mount`, `unmount`, `runLoop`, `stopLoop`, `dispose` — but each is marked `@internal` and stripped from `.d.ts`. The public surface for runtime control lives on `ThreeStart`:
+
+| Public on `ThreeStart` | Internal on `ThreeContext` | What it does |
+|---|---|---|
+| `mount(container)` | `ctx.mount(container)` | Append canvas, attach resize observer, optionally start loop. |
+| `unmount()` | `ctx.unmount()` | Remove canvas, disconnect observer, optionally stop loop. |
+| `runLoop()` | `ctx.runLoop()` | Connect timer to `document`, call `renderer.setAnimationLoop(...)`, emit `LoopRun`. |
+| `stopLoop()` | `ctx.stopLoop()` | Disconnect timer, set animation loop `null`, emit `LoopStop`. |
+| `dispose()` | `ctx.dispose()` | Tear down: unmount, stopLoop, dispose renderer + timer, removeAllListeners. |
+
+This split exists to enforce a clean access boundary: third-party components/modules holding `this.ctx` cannot call `mount`/`runLoop`/etc. by accident or design — the type system simply doesn't expose them. The ThreeStart wrappers are thin: each just forwards to the corresponding `ctx` method and returns `this` for chaining.
+
+## Camera swap mechanics
+
+Setting `ctx.camera = newCamera` triggers `cameraChanged(new, prev)` (private), which:
+
+1. Reassigns `this.scenePass.camera = newCamera` — the render pipeline reads `scenePass.camera` per frame, so this is what actually swaps the rendered viewpoint.
+2. If `newCamera.parent === null`, calls `this.scene.add(newCamera)` — matches the constructor behaviour for a floating default camera.
+3. Updates `aspect` from current container dimensions and calls `updateProjectionMatrix()`.
+4. Emits `CameraChanged` with `[newCamera, prevCamera]`.
+5. Calls `requestRender()` to redraw at next frame.
+
+`PassNode.camera` is a plain instance field read each frame — direct assignment is sufficient, no need to rebuild `scenePass` / `renderPipeline` (both are sealed via `defineProps + readOnly` so couldn't be replaced anyway).
+
+## Idempotence and invariants
+
+- `ThreeStart.start()` is idempotent: second call is a no-op (`this._started` guard).
+- `ensureExtension(obj)` is idempotent: returns the existing extension if present.
+- `attachContext(obj, ctx)` overwrites `ext.context` (no guard). Multiple attaches are a user error but not blocked.
+- `ext.setActive(v)` with `v === ext._active` is a no-op.
+- `comp.setEnabled(v)` with `v === this._enabled` is a no-op.
+- `_subscribe` / `_unsubscribe` are safe to call even when the method is not overridden (no listener added → no-op `off`).
+
+## `destroy()`
+
+`methods.ts::destroy`:
+
+- Behaviour target: calls `ext.destroyComponent(comp)` (which splices from `components` + `_destroy`); falls back to `comp._destroy()` if no ext.
+- Object target: traverses the subtree destroying all components on every extension, then `removeFromParent()`. Extensions themselves are not unset — they stay on the detached `Object3D` and can be re-used if the object is re-added.
+
+## TypedEmitter
+
+`TypedEmitter<T extends EventMap = {}>` is the base class behind every emitter in the core (`ThreeContext`, `ContextModule`, `Object3DBehaviour`).
+
+Surface:
+
+- `on(event, fn, context?) → this` — public.
+- `once(event, fn, context?) → this` — public.
+- `off(event, fn?, context?, once?) → this` — public.
+- `emit(event, ...args) → boolean` — **`protected`**. Only the owning class fires its own events; external code physically cannot.
+- `_removeAllListeners()` — `@internal`, used by destroy paths.
+
+Internals:
+
+- One nullable field `_ee?: EventEmitter` (from `eventemitter3`). Allocated lazily on first `on`/`once`. Classes that extend `TypedEmitter` but never receive a subscriber pay only one reference slot per instance — important when there can be thousands of `Object3DBehaviour` instances.
+- `emit` short-circuits via `this._ee?.emit(...) ?? false` — fire-and-forget without listeners is a no-op, no allocation.
+- All public methods take a generic `K extends keyof T & (string | symbol)` so the event name and listener payload (`...args: T[K]`) are checked at compile time. Default `T = {}` makes both `keyof T = never` — i.e. a class without an explicit event map cannot legitimately call `on` / `emit` (compile error). This is the type-level opt-in pattern.
+
+Combined with `protected emit` + lazy allocation, `TypedEmitter` gives strict encapsulation, type safety, and zero cost when unused — all without a wrapper class on the user side.
+
+## Source layout
+
+```
+src/core/
+├── index.ts                  re-exports the public surface
+├── ThreeStart.ts             entry point + lifecycle wrappers
+├── ThreeContext.ts           shared runtime, sealed fields, modules Proxy, ThreeContextEvents enum + ThreeContextEventMap
+├── ContextModule.ts          base class for global systems
+├── Object3DBehaviour.ts      base class for components
+├── Object3DExtension.ts      per-Object3D sidecar, ensureExtension/getExtension/attachContext
+├── TypedEmitter.ts           lazy-allocating typed emitter base
+├── Register.ts               ThreeStartRegister + RegisterField helper
+├── methods.ts                top-level operations: addComponent / getComponent / setActive / destroy / ...
+└── utils/
+    ├── define-props.ts       defineProps, readOnly, notEnumer, createReadonlyView
+    └── assert-defined.ts
+```

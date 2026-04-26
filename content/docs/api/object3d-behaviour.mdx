@@ -1,0 +1,84 @@
+---
+title: Object3DBehaviour
+description: Base class for all components. Extend it, override lifecycle methods, attach to any Object3D.
+---
+
+import doc from './generated/Object3DBehaviour.json'
+
+`Object3DBehaviour` is the base class for all components. Extend it, override the lifecycle methods you need, and attach it to any `Object3D` via [`addComponent`](/docs/api/operations). The component hooks itself into the loop and the lifecycle automatically — the shared [`ThreeContext`](/docs/api/three-context) is available as `this.ctx`, and any registered [`ContextModule`](/docs/api/context-module) via `this.modules`.
+
+```ts
+import { Object3DBehaviour, addComponent } from "three-start";
+
+class Spin extends Object3DBehaviour {
+  onAwake() {
+    // initialize
+  }
+  onUpdate() {
+    this.object.rotation.y += this.ctx.getDeltaTime();
+  }
+  onDestroy() {
+    // clean up
+  }
+}
+
+addComponent(mesh, Spin);
+```
+
+First activation order: `onAwake` → `onEnable` → `onStart`
+
+Enable/disable cycle: `onEnable` ↔ `onDisable`
+
+On removal: `onDisable` → `onDestroy`
+
+## Properties
+
+<ApiProperties data={doc} />
+
+## Methods
+
+<ApiMethods data={doc} />
+
+## Override methods
+
+These are the lifecycle hooks you implement in your subclass.
+
+<Callout type="info">
+  Per-frame hooks (`onUpdate`, `onBeforeRender`, `onAfterRender`) are subscribed to the runtime loop **only if you override them**. An empty component pays nothing for dispatch.
+</Callout>
+
+<ApiLifecycle data={doc} />
+
+## Events
+
+`Object3DBehaviour` extends [`TypedEmitter`](/docs/api/typed-emitter) — declare your own event map via the generic parameter to expose typed events on instances of your subclass.
+
+<ApiEvents data={doc} />
+
+### Declaring events in your subclass
+
+Pass a typed event map as the generic parameter. Keys become the `event` argument in `on` / `off` / `once`, and tuple values type the listener payload. `emit` is `protected` — only the component itself can fire its own events.
+
+```ts
+type HealthEvents = {
+  damaged: [amount: number, source: string];
+  died: [];
+};
+
+class Health extends Object3DBehaviour<HealthEvents> {
+  hp = 100;
+
+  takeDamage(n: number, by: string) {
+    this.hp -= n;
+    this.emit("damaged", n, by);          // ✅ inside the class
+    if (this.hp <= 0) this.emit("died");  // ✅
+  }
+}
+
+// Subscribe from outside:
+const health = getComponent(player, Health)!;
+health.on("damaged", (amount, by) => console.log(`-${amount} from ${by}`));
+health.emit("damaged", 10, "x");          // ❌ compile error: emit is protected
+```
+
+The default for the generic is `{}` — without declaring events, calling `on` / `emit` fails at compile time (`keyof {} = never`).

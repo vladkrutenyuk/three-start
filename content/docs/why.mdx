@@ -1,0 +1,47 @@
+---
+title: Why it exists
+description: The problems three-start solves — boilerplate, no model for logic, fragmented community code, and why this isn't R3F.
+---
+
+Three.js is a rendering library. Everything around it, you build yourself — and you build it again in every new project. That "everything around it" is where the trouble starts.
+
+## The boilerplate
+
+Spinning up a Three.js scene always starts with the same dozens of lines: renderer, scene, camera, DPR-aware sizing, a `ResizeObserver` or window listener, a `requestAnimationFrame` loop, a timer for delta and elapsed time. None of this is interesting, none of it is project-specific, and none of it is standardized across the ecosystem — everyone copies their own preferred snippet.
+
+## No model for logic
+
+Once you have a renderer and a scene, you need logic. Things that move, react, initialize, and eventually go away. Three.js has no opinion about how that works — and filling that gap yourself is where most projects start to crack.
+
+#### 1. Where does `update` come from?
+
+The moment a project has more than one thing happening per frame, this becomes the central question. What you see in the wild:
+
+- a single `animate()` function that imports every moving part and calls them in order
+- a growing list of callbacks registered to a hand-rolled event bus
+- per-object closures captured over shared state, triggered from a god-loop
+- framework-shaped abstractions reinvented from scratch in every project
+
+All of these work for a single cube. None of them scale cleanly. The loop becomes the dumping ground where every module's per-frame concerns collide.
+
+#### 2. Lifecycle is the same story.
+
+Every piece of logic also has something to set up on start, and something to clean up when it's done. Without a shared pattern, cleanup is forgotten or re-invented per project. Init code scatters across constructors, factory functions, and ad-hoc `setup()` calls that may or may not run in the right order. Adding a new system means answering the same questions again from scratch: where does it live, how does it start, where does its update go, what happens on destroy?
+
+#### 3. And then there's control.
+
+A complex object — a player, an enemy, a UI overlay — is often many systems working together: input, animation, physics, sound. All of them need to start together and stop together. Without a standard interface, pausing the game means reaching into each one manually and calling whatever you happened to name the method — `disable()`, `pause()`, `setSleeping()`, `mute()` — using references you threaded there yourself. Every piece has its own API. Every new system makes the wiring bigger.
+
+> **Picture this:** your player has four systems and you want to pause the game. You call `inputManager.disable()`, `animator.pause()`, `physicsBody.setSleeping(true)`, `soundEmitter.mute()` — all different APIs, all in different places, held together by memory and discipline. Add two more systems next week. Forget to update the pause function. Now you have a bug that only appears after a specific sequence in production.
+
+The pattern doesn't get better on its own — it just grows with the project.
+
+## Fragmented community code
+
+Any Three.js example you open — on CodeSandbox, in a Twitter thread, in a repo — is structured differently from the last one. There's no shared mental model, so to understand a demo you read it end to end. This slows the whole ecosystem: harder to learn from, harder to contribute to, harder to onboard into a team.
+
+## Why this isn't R3F
+
+React Three Fiber addresses the same organizational problem, and does it well — but by importing the React paradigm, designed for UI, into interactive 3D logic. For people who prefer vanilla + OOP (and there are a lot of us), that trade-off isn't the right one.
+
+**three-start is the answer for them.** A thin layer that standardizes the bootstrap, the lifecycle, and the way logic is split and wired — without pulling in a rendering paradigm from another domain.

@@ -1,0 +1,158 @@
+---
+title: TypeScript
+description: Module registry augmentation, typed events, typed component access, and other patterns for getting full type safety out of three-start.
+---
+
+three-start is written in TypeScript and ships its `.d.ts` files. Out of the box, components and modules are typed; the only piece you opt into is the **module registry**, because the library can't know what modules your project registers until you tell it.
+
+## Module registry
+
+Without the registry, `this.modules` falls back to `Record<string, ContextModule>` — every key is loose and every access loses the concrete subclass type. Augment the `ThreeStartRegister` interface once in your project, and every site that reads `modules` becomes fully typed:
+
+```ts title="src/types.d.ts (or any file imported once at the top level)"
+import "three-start";
+import { InputModule } from "./modules/input";
+import { AudioModule } from "./modules/audio";
+import { AssetsModule } from "./modules/assets";
+
+declare module "three-start" {
+  interface ThreeStartRegister {
+    modules: {
+      input: InputModule;
+      audio: AudioModule;
+      assets: AssetsModule;
+    };
+  }
+}
+```
+
+After this:
+
+```ts
+class Player extends Object3DBehaviour {
+  onUpdate() {
+    this.modules.input.isPressed("KeyA"); // ✓ typed as InputModule
+    this.modules.unknown;                  // ✗ Property 'unknown' does not exist
+  }
+}
+
+// also typed at the registration site:
+const starter = new ThreeStart().addModules({
+  input: new InputModule(),
+  audio: new AudioModule(),
+  // assets: ...   missing keys are allowed; addModules is incremental
+});
+```
+
+The same registry powers `this.modules` in components, in other modules, and `ctx.modules` for top-level code.
+
+## Typed events on components and modules
+
+[`Object3DBehaviour`](/docs/api/object3d-behaviour) and [`ContextModule`](/docs/api/context-module) both extend [`TypedEmitter`](/docs/api/typed-emitter). Pass an event map as a generic to type `emit` / `on` / `off` / `once`:
+
+```ts
+type HealthEvents = {
+  damaged: [amount: number, source: THREE.Object3D];
+  died: [];
+};
+
+class Health extends Object3DBehaviour<HealthEvents> {
+  damage(n: number, source: THREE.Object3D) {
+    this.emit("damaged", n, source);   // ✓ tuple matches
+    // this.emit("damaged");            // ✗ missing args
+    // this.emit("dyed");               // ✗ unknown event
+  }
+}
+
+// listener side:
+const h = getComponent(player, Health)!;
+h.on("damaged", (amount, source) => { /* both typed */ });
+```
+
+The event map is `Record<string, unknown[]>` — each key is an event name, each value is the tuple of listener arguments.
+
+## Typed component access
+
+`getComponent` and `getComponents` are generic over the component class:
+
+```ts
+import { getComponent, getComponents } from "three-start";
+
+const health = getComponent(obj, Health);          // Health | null
+const allDamageables = getComponents(obj, Health); // Health[]
+const everything = getComponents(obj);             // Object3DBehaviour[]
+```
+
+`addComponent` returns the instance with its concrete type, so chaining stays typed:
+
+```ts
+const ai = addComponent(enemy, EnemyAI);
+ai.target = player; // ✓ typed
+```
+
+## Typing the host object
+
+`this.object` on a component is `THREE.Object3D`. If your component only makes sense on a specific subclass, narrow it once in `onAwake` and store the narrower type:
+
+```ts
+class GlowOnHover extends Object3DBehaviour {
+  private mesh!: THREE.Mesh<THREE.BufferGeometry, THREE.MeshStandardMaterial>;
+
+  onAwake() {
+    if (!(this.object instanceof THREE.Mesh)) {
+      throw new Error("GlowOnHover requires a Mesh");
+    }
+    this.mesh = this.object;
+  }
+}
+```
+
+For internal components where you trust the call site, a one-line cast is fine:
+
+```ts
+private mesh = this.object as THREE.Mesh;
+```
+
+## Type-only re-exports
+
+three-start re-exports the lifecycle / API contracts as types — use them when accepting components or modules from outside:
+
+```ts
+import type {
+  ThreeStartOptions,
+  ThreeStartModules,
+  Object3DBehaviourConstructor,
+  EventMap,
+} from "three-start";
+
+function spawn<T extends Object3DBehaviour>(
+  obj: THREE.Object3D,
+  klass: Object3DBehaviourConstructor<T>,
+): T {
+  return addComponent(obj, klass);
+}
+```
+
+## Importing Three.js
+
+three-start uses the WebGPU build internally (`three/webgpu`). For most user code, the standard `three` import is enough — `Object3D`, `Mesh`, materials and geometries all match. If you touch renderer-specific APIs (TSL nodes, the `RenderPipeline`, `WebGPURenderer`-only options), import from `three/webgpu`:
+
+```ts
+import * as THREE from "three";              // most code
+import { WebGPURenderer } from "three/webgpu"; // renderer-specific
+```
+
+## Type-checking the project
+
+```bash
+npm run types:check
+```
+
+Runs `fumadocs-mdx` (regenerates derived module declarations) followed by `tsc --noEmit`. Run it before each commit if you've touched component or module shapes.
+
+<Cards>
+  <Card title="Writing a component" href="/docs/core-guides/writing-component" />
+  <Card title="Writing a module" href="/docs/core-guides/writing-modules" />
+  <Card title="TypedEmitter API" href="/docs/api/typed-emitter" />
+  <Card title="ThreeContext API" href="/docs/api/three-context" />
+</Cards>

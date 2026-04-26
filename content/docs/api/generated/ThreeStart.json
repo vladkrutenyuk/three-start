@@ -1,0 +1,148 @@
+{
+  "name": "ThreeStart",
+  "description": "Entry point of every three-start project. Owns a single [`ThreeContext`](/docs/api/three-context),\nregisters modules, controls lifecycle (mount / loop / dispose), and bootstraps the scene on `start()`.",
+  "initializer": {
+    "signature": "new ThreeStart(options?: ThreeStartOptions)",
+    "signatureHtml": "<span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">new</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\"> ThreeStart</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">(options</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">?:</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\"> ThreeStartOptions)</span>",
+    "optionsTypeName": "ThreeStartOptions"
+  },
+  "constructorOptions": [
+    {
+      "name": "renderer",
+      "type": "THREE.Renderer",
+      "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">THREE</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">.Renderer</span>",
+      "optional": true,
+      "description": "The Three.js renderer to use. Defaults to a `WebGPURenderer` with antialiasing."
+    },
+    {
+      "name": "camera",
+      "type": "THREE.PerspectiveCamera",
+      "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">THREE</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">.PerspectiveCamera</span>",
+      "optional": true,
+      "description": "Override the default `PerspectiveCamera`. If not provided, one is created automatically and added to the scene."
+    },
+    {
+      "name": "scene",
+      "type": "THREE.Scene",
+      "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">THREE</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">.Scene</span>",
+      "optional": true,
+      "description": "Override the default `Scene`. If not provided, an empty scene is created."
+    },
+    {
+      "name": "manageLoopManually",
+      "type": "boolean",
+      "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">boolean</span>",
+      "optional": true,
+      "description": "When `true`, the render loop is NOT started automatically on `mount()`.\nCall `starter.runLoop()` / `starter.stopLoop()` manually.",
+      "default": "false"
+    },
+    {
+      "name": "autoInitRenderer",
+      "type": "boolean",
+      "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">boolean</span>",
+      "optional": true,
+      "description": "When `true`, calls `renderer.init()` inside the constructor.",
+      "default": "true"
+    }
+  ],
+  "properties": [
+    {
+      "name": "isStarted",
+      "type": "boolean",
+      "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">boolean</span>",
+      "readonly": true,
+      "description": "`true` once `start()` has been called. After this, modules can no longer be registered."
+    },
+    {
+      "name": "ctx",
+      "type": "ThreeContext",
+      "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">ThreeContext</span>",
+      "readonly": true,
+      "description": "The shared [`ThreeContext`](/docs/api/three-context) runtime (renderer, scene, camera, modules, events). Created in the constructor."
+    }
+  ],
+  "methods": [
+    {
+      "name": "start",
+      "params": [],
+      "returns": "this",
+      "returnsHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">this</span>",
+      "signature": "() => this",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">() </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> this</span>",
+      "tags": [],
+      "description": "Bootstrap the scene: awaken registered [`ContextModule`](/docs/api/context-module)s, attach\nthe context to the scene graph, and activate [`Object3DBehaviour`](/docs/api/object3d-behaviour)\ninstances on every existing object. After `start()`, any objects added to the scene get\nbootstrapped automatically.\n\nNo more modules can be registered after this call."
+    },
+    {
+      "name": "addModules",
+      "params": [
+        {
+          "name": "modules",
+          "type": "Partial<ThreeStartModules>",
+          "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">Partial</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">&#x3C;</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">ThreeStartModules</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">></span>"
+        }
+      ],
+      "returns": "this",
+      "returnsHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">this</span>",
+      "signature": "(modules: Partial<ThreeStartModules>) => this",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">(</span><span style=\"--shiki-light:#E36209;--shiki-dark:#FFAB70\">modules</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">:</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\"> Partial</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">&#x3C;</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\">ThreeStartModules</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">>) </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> this</span>",
+      "tags": [],
+      "description": "Register [`ContextModule`](/docs/api/context-module) instances on the context. Can be called\nmultiple times to register them incrementally — one at a time, in groups, or all at once.\nThe same key cannot be registered twice (subsequent attempts are skipped with a warning).\n\n**Must be called before `start()`** — modules participate in the bootstrap\nlifecycle (`onAwake` → `onStart`), so registering after it throws."
+    },
+    {
+      "name": "mount",
+      "params": [
+        {
+          "name": "container",
+          "type": "HTMLDivElement",
+          "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">HTMLDivElement</span>"
+        }
+      ],
+      "returns": "this",
+      "returnsHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">this</span>",
+      "signature": "(container: HTMLDivElement) => this",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">(</span><span style=\"--shiki-light:#E36209;--shiki-dark:#FFAB70\">container</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">:</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\"> HTMLDivElement</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">) </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> this</span>",
+      "tags": [],
+      "description": "Append the renderer canvas to a container and wire up resize + render loop (unless `manageLoopManually` is set). Fires `Mount`."
+    },
+    {
+      "name": "unmount",
+      "params": [],
+      "returns": "this",
+      "returnsHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">this</span>",
+      "signature": "() => this",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">() </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> this</span>",
+      "tags": [],
+      "description": "Remove the renderer canvas from DOM, disconnect resize observer. Fires `Unmount`."
+    },
+    {
+      "name": "runLoop",
+      "params": [],
+      "returns": "this",
+      "returnsHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">this</span>",
+      "signature": "() => this",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">() </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> this</span>",
+      "tags": [],
+      "description": "Start the render loop. Resumable after `stopLoop()`."
+    },
+    {
+      "name": "stopLoop",
+      "params": [],
+      "returns": "this",
+      "returnsHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">this</span>",
+      "signature": "() => this",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">() </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> this</span>",
+      "tags": [],
+      "description": "Stop the render loop. Resumable via `runLoop()`."
+    },
+    {
+      "name": "dispose",
+      "params": [],
+      "returns": "this",
+      "returnsHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">this</span>",
+      "signature": "() => this",
+      "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">() </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> this</span>",
+      "tags": [],
+      "description": "Tear everything down: unmount, stop loop, dispose renderer and timer."
+    }
+  ]
+}

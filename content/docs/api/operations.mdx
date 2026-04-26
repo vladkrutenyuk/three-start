@@ -1,0 +1,124 @@
+---
+title: Operations
+description: Top-level imperative functions for adding components, querying them, toggling activation, and destroying objects.
+---
+
+These are the top-level functions exported from `three-start` for working with [`Object3DBehaviour`](/docs/api/object3d-behaviour) components and the active state of `Object3D` instances at runtime.
+
+```ts
+import { addComponent, getComponent, getComponents, setActive, getIsActive, getIsActiveSelf, destroy } from "three-start";
+```
+
+## addComponent
+
+```ts
+function addComponent<T extends Object3DBehaviour>(
+  obj: THREE.Object3D,
+  klass: new () => T
+): T
+```
+
+Instantiate a component and attach it to `obj`. If the object is already in an active hierarchy with context, the full lifecycle fires immediately (`onAwake` → `onEnable` → `onStart`). Otherwise it fires when the object joins such a hierarchy.
+
+Returns the new component instance.
+
+```ts
+const spin = addComponent(cube, Spin);
+spin.disable(); // immediately control it
+```
+
+---
+
+## getComponent
+
+```ts
+function getComponent<T extends Object3DBehaviour>(
+  obj: THREE.Object3D,
+  klass: new () => T
+): T | null
+```
+
+Returns the first component of the given class on `obj`, or `null` if none.
+
+```ts
+const spin = getComponent(cube, Spin);
+spin?.enable();
+```
+
+---
+
+## getComponents
+
+```ts
+function getComponents(obj: THREE.Object3D): Object3DBehaviour[]
+function getComponents<T extends Object3DBehaviour>(obj: THREE.Object3D, klass: new () => T): T[]
+```
+
+Returns all components on `obj`. Optionally filtered by class.
+
+---
+
+## setActive
+
+```ts
+function setActive(obj: THREE.Object3D, active: boolean): void
+```
+
+Set `obj`'s own active flag (`activeSelf`). The change cascades down the subtree: every descendant whose own flag is `true` switches its effective state with `obj`, and components on each affected object receive `onEnable` / `onDisable`. Descendants whose own flag is already `false` are skipped — their subtree was already inactive.
+
+`setActive` only drives the component lifecycle — it does **not** touch the object's `visible` property. If you want a deactivated subtree to also stop rendering, set `obj.visible = false` yourself (Three.js cascades visibility through the scene tree on its own). See the [setActive guide](/docs/core-guides/set-active) for the cascade rules and recipes.
+
+```ts
+setActive(player, false); // pauses player + all descendants whose own flag is true
+setActive(player, true);  // resumes them
+```
+
+---
+
+## getIsActive
+
+```ts
+function getIsActive(obj: THREE.Object3D): boolean
+```
+
+Returns `obj`'s **effective** active state — `activeInHierarchy`. `true` only when `obj`'s own flag is `true` AND every ancestor's own flag is also `true`. Objects (and ancestors) that have never been touched by three-start count as active by default.
+
+```ts
+if (getIsActive(player)) {
+  // player is currently running its lifecycle
+}
+```
+
+---
+
+## getIsActiveSelf
+
+```ts
+function getIsActiveSelf(obj: THREE.Object3D): boolean
+```
+
+Returns `obj`'s **own** active flag — `activeSelf`. The value last passed to `setActive(obj, ...)`, regardless of any ancestor's state. `true` by default for objects never touched by three-start.
+
+```ts
+setActive(child, false);
+getIsActiveSelf(child); // false
+getIsActive(child);     // false (and would also be false if any ancestor were inactive)
+```
+
+---
+
+## destroy
+
+```ts
+function destroy(target: THREE.Object3D | Object3DBehaviour): void
+```
+
+Destroy a component or an entire object.
+
+- **Component**: fires `onDisable` → `onDestroy`, removes from the object, cleans up all listeners.
+- **Object3D**: traverses the hierarchy, fires `onDestroy` on all components, then removes the object from its parent.
+
+```ts
+destroy(getComponent(cube, Spin)); // remove just the component
+destroy(cube);                      // remove the whole object + all components
+```

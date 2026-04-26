@@ -1,0 +1,21 @@
+{
+  "pages": [
+    "---Getting Started---",
+    "index",
+    "why",
+    "installation",
+    "quick-start",
+    "quick-start-v2",
+    "quick-start-v3",
+    "---Guides & Concepts---",
+    "core-guides/writing-component",
+    "core-guides/writing-modules",
+    "core-guides/context",
+    "core-guides/lifecycle",
+    "core-guides/set-active",
+    "core-guides/typescript",
+    "---",
+    "api",
+    "advanced"
+  ]
+}

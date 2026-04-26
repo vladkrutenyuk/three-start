@@ -1,0 +1,133 @@
+---
+title: Quick Start (v2)
+description: Three core concepts of three-start in one cohesive example — components, modules, lifecycle control.
+---
+
+Three concepts cover almost everything you'll write with three-start:
+
+- **Components** — pieces of behaviour you attach to a `THREE.Object3D` ([`Object3DBehaviour`](/docs/api/object3d-behaviour))
+- **Modules** — global systems on the shared context ([`ContextModule`](/docs/api/context-module))
+- **Lifecycle control** — turning behaviour on/off without ripping objects out of the scene
+
+The snippet below shows them working together in a tiny shooter scene. Each line of the example exists because the design needs it — there's no API tour for its own sake.
+
+```ts title="main.ts"
+import * as THREE from "three/webgpu";
+import {
+  ThreeStart,
+  Object3DBehaviour,
+  ContextModule,
+  addComponent,
+  getComponent,
+  setActive,
+  getIsActive,
+  destroy,
+} from "three-start";
+
+// ── Module: turn pointer clicks into "hit" events on whatever's under them ──
+class PointerModule extends ContextModule {
+  private raycaster = new THREE.Raycaster();
+  private ndc = new THREE.Vector2();
+
+  onAwake() {
+    this.ctx.renderer.domElement.addEventListener("pointerdown", this.handle);
+  }
+
+  private handle = (e: PointerEvent) => {
+    const r = this.ctx.renderer.domElement.getBoundingClientRect();
+    this.ndc.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+    this.ndc.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+    this.raycaster.setFromCamera(this.ndc, this.ctx.camera);
+
+    const [hit] = this.raycaster.intersectObjects(this.ctx.scene.children, true);
+    if (!hit) return;
+
+    // The module doesn't know which objects are damageable — it asks. // [!code highlight]
+    getComponent(hit.object, Health)?.takeDamage(25);                  // [!code highlight]
+  };
+}
+
+declare module "three-start" {
+  interface ThreeStartRegister {
+    modules: { pointer: PointerModule };
+  }
+}
+
+// ── Component: idle rotation. Pure visual. ──
+class Spin extends Object3DBehaviour {
+  speed = 1;
+  onUpdate() {
+    this.object.rotation.y += this.speed * this.ctx.getDeltaTime();
+  }
+}
+
+// ── Component: HP + reactions. Coexists with Spin on every enemy. ──
+class Health extends Object3DBehaviour {
+  hp = 100;
+  private mat!: THREE.MeshStandardMaterial;
+
+  onAwake() {
+    this.mat = (this.object as THREE.Mesh).material as THREE.MeshStandardMaterial;
+  }
+
+  takeDamage(amount: number) {
+    this.hp -= amount;
+    this.mat.color.setRGB(1, this.hp / 100, this.hp / 100); // bleed red
+
+    // Wounded enemies stop rotating — disable the sibling Spin component. // [!code highlight]
+    const spin = getComponent(this.object, Spin);                          // [!code highlight]
+    spin?.setEnabled(this.hp > 30);                                        // [!code highlight]
+
+    // Dead enemies are removed from the scene entirely.                   // [!code highlight]
+    if (this.hp <= 0) destroy(this.object);                                // [!code highlight]
+  }
+
+  onDestroy() {
+    console.log("enemy down, hp was", this.hp);
+  }
+}
+
+// ── Bootstrap ──
+const starter = new ThreeStart()
+  .addModules({ pointer: new PointerModule() });
+
+const enemies = new THREE.Group();
+starter.ctx.scene.add(enemies);
+
+for (let i = 0; i < 5; i++) {
+  const cube = new THREE.Mesh(
+    new THREE.BoxGeometry(),
+    new THREE.MeshStandardMaterial({ color: 0xffffff }),
+  );
+  cube.position.x = i * 1.5 - 3;
+  enemies.add(cube);
+
+  addComponent(cube, Spin);
+  addComponent(cube, Health);
+}
+
+starter.ctx.scene.add(new THREE.AmbientLight(0xffffff, 1));
+starter.ctx.camera.position.set(0, 2, 8);
+starter.ctx.camera.lookAt(0, 0, 0);
+
+starter.mount(document.getElementById("app")!);
+starter.start();
+
+// Pause/resume the entire enemies branch with `P`.                        // [!code highlight]
+window.addEventListener("keydown", (e) => {                                // [!code highlight]
+  if (e.code === "KeyP") setActive(enemies, !getIsActive(enemies));        // [!code highlight]
+});
+```
+
+Walk through what each concept does in this scene:
+
+| Concept | Where it lives | Why the example needs it |
+|---|---|---|
+| **Component** (`Object3DBehaviour`) | `Spin`, `Health` | Per-cube state and per-frame logic. Two components on the same cube prove they coexist independently — `Spin` doesn't care about HP, `Health` doesn't care about rotation. |
+| **Module** (`ContextModule`) | `PointerModule` | One global piece of state (the raycaster + canvas listener). Every cube reuses it; the module doesn't need to know how many cubes exist or which ones are alive. |
+| `getComponent(obj, Class)` | `PointerModule.handle`, `Health.takeDamage` | Both cases the caller only has an `Object3D` and needs to discover whether a particular behaviour is attached. The pointer module finds `Health` on the hit object; `Health` finds its sibling `Spin` to stun it. |
+| `comp.setEnabled(false)` | `Health.takeDamage` (stun) | Pause **one behaviour** on an object without affecting others. Cube keeps rendering; only its rotation halts. |
+| `setActive(group, false)` | `KeyP` handler (pause) | Freeze an **entire subtree** — every component under `group` runs `onDisable`. Reverse with `setActive(group, true)`. (`setActive` is lifecycle-only; set `group.visible = false` separately if you also want the subtree to stop rendering.) |
+| `destroy(object)` | `Health.takeDamage` (death) | Permanently remove. Fires `onDestroy` on every component on the object before unparenting. |
+
+These three layers cover the whole library. The rest of the docs goes deep into each:

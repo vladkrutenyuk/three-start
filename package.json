@@ -1,0 +1,111 @@
+{
+  "name": "three-start",
+  "version": "0.1.0-alpha.0",
+  "description": "Minimal foundation layer for Three.js: bootstrap, lifecycle, and a unified component model. A thin layer around Three.js, not a replacement for it.",
+  "keywords": [
+    "three",
+    "three.js",
+    "threejs",
+    "webgl",
+    "webgpu",
+    "components",
+    "ecs",
+    "lifecycle",
+    "framework",
+    "game-engine",
+    "scene-graph",
+    "object3d",
+    "behaviour",
+    "module"
+  ],
+  "author": "Vladislav Kruteniuk (https://x.com/vladkrutenyuk)",
+  "license": "MIT",
+  "homepage": "https://three-start.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vladkrutenyuk/three-start.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vladkrutenyuk/three-start/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "llms.txt"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "dev": "npm run docs:gen && vite dev",
+    "build": "vite build",
+    "build:lib": "vite build --config vite.lib.config.ts && tsc -p tsconfig.lib.json",
+    "start": "serve .output/public --config ../../serve.json",
+    "preview": "vite preview",
+    "docs:gen": "tsx scripts/gen-api-docs.ts",
+    "prebuild": "tsx scripts/gen-api-docs.ts",
+    "types:check": "fumadocs-mdx && tsc --noEmit",
+    "prepare": "fumadocs-mdx || true",
+    "prepublishOnly": "npm run build:lib",
+    "lint": "biome check",
+    "format": "biome format --write"
+  },
+  "peerDependencies": {
+    "@types/three": ">=0.183.0",
+    "eventemitter3": ">=5.0.4",
+    "three": ">=0.183.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.11",
+    "@newkrok/three-particles": "^3.0.0",
+    "@orama/orama": "^3.1.18",
+    "@tailwindcss/vite": "^4.2.2",
+    "@tanstack/react-router": "1.168.18",
+    "@tanstack/react-router-devtools": "1.166.13",
+    "@tanstack/react-start": "1.167.32",
+    "@tanstack/start-static-server-functions": "1.166.32",
+    "@types/mdx": "^2.0.13",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/three": "0.183.1",
+    "@vitejs/plugin-react": "^6.0.1",
+    "camera-controls": "^3.1.2",
+    "eventemitter3": "5.0.4",
+    "fumadocs-core": "16.7.14",
+    "fumadocs-mdx": "14.2.13",
+    "fumadocs-ui": "16.7.14",
+    "lucide-react": "^1.8.0",
+    "mermaid": "^11.14.0",
+    "next-themes": "^0.4.6",
+    "nitro": "^3.0.260311-beta",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "serve": "^14.2.6",
+    "srvx": "^0.11.15",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss": "^4.2.2",
+    "three": "0.183.2",
+    "ts-morph": "^28.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.8"
+  }
+}

@@ -1,0 +1,73 @@
+---
+title: Installation
+description: How to install three-start and its peer dependencies.
+---
+
+## Install
+
+```package-install
+three-start
+```
+
+## Peer dependencies
+
+three-start keeps its own bundle small by declaring `three` and `eventemitter3` as peer dependencies — meaning they live in your project, not inside three-start. Install them alongside three-start:
+
+```package-install
+three eventemitter3
+```
+
+Minimum versions:
+
+| Package         | Minimum     | Tested against |
+| --------------- | ----------- | -------------- |
+| `three`         | `>=0.183.0` | `^0.183.2`     |
+| `eventemitter3` | `>=5.0.4`   | `^5.0.4`       |
+
+<Callout type="warn">
+  **`three >= 0.183` is required**, not optional. three-start uses [`THREE.RenderPipeline`](https://threejs.org/docs/#api/en/renderers/webgpu/RenderPipeline) (a WebGPU-era addition introduced in r183) to drive rendering. Older releases simply don't ship the symbol — installation will succeed but `new ThreeStart()` will fail at runtime.
+</Callout>
+
+### TypeScript
+
+If you use TypeScript, also install the Three.js type definitions:
+
+```package-install
+-D @types/three@^0.183.1
+```
+
+three-start's own types ship with the package — no extra `@types/*` needed.
+
+## Sanity check
+
+A minimal import to verify the package resolves:
+
+```ts
+import { ThreeStart } from "three-start";
+
+const starter = new ThreeStart();
+console.log(starter.ctx); // a ThreeContext with renderer, scene, camera, …
+```
+
+If this compiles and logs the context, you're good. From here, head to [Quick Start](/docs/quick-start) for a full working scene.
+
+## Renderer note (WebGPU vs WebGL)
+
+By default `new ThreeStart()` instantiates a **WebGPU** renderer (`THREE.WebGPURenderer` from `three/webgpu`). If your target browser doesn't support WebGPU yet, or you just prefer WebGL, pass a renderer explicitly:
+
+```ts
+import * as THREE from "three";
+import { ThreeStart } from "three-start";
+
+const starter = new ThreeStart({
+  ctx: {
+    renderer: new THREE.WebGLRenderer({ antialias: true }),
+  },
+});
+```
+
+Everything else in three-start is renderer-agnostic.
+
+## Browser support
+
+three-start is a native ES module. It targets modern evergreen browsers and Node 20+ for tooling. WebGPU features follow what `three/webgpu` supports in the chosen browser.

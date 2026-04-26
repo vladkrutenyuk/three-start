@@ -1,0 +1,156 @@
+---
+title: Lifecycle
+description: When components and modules become active, when their render loop event methods tick, when they're destroyed — and the order it all happens in.
+---
+
+Two kinds of entities share the same set of named event methods:
+
+| Kind | What it is |
+|---|---|
+| **Module** ([`ContextModule`](/docs/api/context-module)) | Global system. Always on once registered. |
+| **Component** ([`Object3DBehaviour`](/docs/api/object3d-behaviour)) | Behaviour added to a single `Object3D` via `addComponent()`. Can be enabled / disabled / destroyed. |
+
+Modules can't be destroyed or disabled/enabled. Everything else they share with components.
+
+## Bootstrap
+
+`start()` of `ThreeStart` instance is called once and it starts lifecycle.
+
+```mermaid
+flowchart TB
+    S{{"start() called"}} --> MODULES
+
+    subgraph MODULES[Modules]
+      MA["onAwake()"] --> MS["onStart()"]
+    end
+
+    MODULES --> COMPONENTS
+
+    subgraph COMPONENTS["Components"]
+      CA["onAwake()"] -->|if active/enabled| CE["onEnable()"]
+      CE --> CS["onStart()"]
+    end
+
+    COMPONENTS --> R{{"render loop events"}}
+
+  classDef phase font-family:monospace
+  class MA,MS,CA,CE,CS phase;
+
+  classDef _subgraphs fill:black
+  class MODULES,COMPONENTS _subgraphs
+```
+
+- **Modules first, in `onAwake` → `onStart` order, fully finished before any component lifecycle starts.** Once a component's `onAwake` runs, every module has already gone through both phases — so `this.modules.<key>` is safe to use from `onAwake` onwards.
+- **Then components, in `onAwake` → `onEnable` → `onStart` order.**
+- **`onEnable` and `onStart` fire only on active components.** A component is active when it is `enabled` AND no ancestor was made inactive via `setActive(ancestor, false)`. Inactive components stop at `onAwake` and wait — the moment they become active, `onEnable` → `onStart` fires for them.
+- **Inside one phase, the order matches registration / scene-graph order.** Modules run in the order you passed to `addModules()`. Components run in scene-graph traversal order.
+
+<Callout type="warn">
+  Bootstrap touches **only**:
+
+  - **Modules** registered on your `ThreeStart` instance via `addModules()`.
+  - **Components** added via `addComponent()` to objects that were added to the scene tree of your `ThreeStart` instance's context (`ctx`).
+</Callout>
+
+<Callout type="info">
+  If a module's `onAwake` / `onStart` spawns objects with components, those components don't become active mid-bootstrap — they wait their turn.
+</Callout>
+
+## Render loop
+Also known as the animation loop. Each frame, in order:
+
+```mermaid
+flowchart LR
+    U("onUpdate()") e1@--> BR("onBeforeRender()")
+    BR e2@--> R{{render call}}
+    R e3@--> AR("onAfterRender()")
+  classDef phase fill:#553366,stroke:#333,color:#fff,text-align:left
+  class R phase;
+  classDef animate stroke-dasharray: 9,5,stroke-dashoffset: 900,animation: dash 25s linear infinite;
+  class e1,e2,e3,e4 animate
+```
+
+<Callout type="info">
+  In every render loop event method, **all modules run before any component**. A module can mutate state in `onUpdate` and every component sees the result the same frame.
+</Callout>
+
+<Callout type="note">
+  Render loop event methods are subscribed **only if you override them**. An empty component pays nothing for dispatch.
+</Callout>
+
+## When a component starts its lifecycle
+
+A component starts its lifecycle the moment **all three** of these are true:
+
+* [x] The component was added to an `Object3D` via `addComponent(obj, MyComp)`.
+* [x] That object was added to the scene tree of your `ThreeStart` instance's context (`ctx.scene`).
+* [x] `ThreeStart.start()` was called.
+
+<Callout type="info">
+**The order in which you do these doesn't matter.** You can call `addComponent` before `start()` or after; you can add the component to an object that's already in the scene tree, or to one that gets added later. Whichever route you take, the moment the last of the three holds, the component becomes active and runs its first-activation event methods.
+</Callout>
+
+```ts title="1. addComponent → object added to scene → start"
+const starter = new ThreeStart();
+const obj = new THREE.Object3D();
+
+addComponent(obj, MyComp);
+starter.ctx.scene.add(obj);
+starter.start();  // MyComp: onAwake -> onStart -> onEnable -> render loop events // [!code highlight]
+```
+
+```ts title="2. object added to scene tree → start → addComponent"
+const starter = new ThreeStart();
+const obj = new THREE.Object3D();
+
+starter.ctx.scene.add(obj);
+starter.start();
+addComponent(obj, MyComp); // MyComp: onAwake -> onStart -> onEnable -> render loop events // [!code highlight]
+```
+
+```ts title="3. start → addComponent → object added to scene"
+const starter = new ThreeStart();
+const obj = new THREE.Object3D();
+
+starter.start();
+addComponent(obj, MyComp);
+starter.ctx.scene.add(obj); // MyComp: onAwake -> onStart -> onEnable -> render loop events // [!code highlight]
+```
+
+## Enable/Disable an alive component
+Component's `enable()` / `disable()` methods fire the matching event method and flip `enabled`.
+
+```mermaid
+flowchart LR
+    EN[/"enable()"/] -->|enabled = true| HE("onEnable()")
+    DI[/"disable()"/] -->|enabled = false| HD("onDisable()")
+```
+
+<Callout type="info">
+  While a component is disabled, its render loop event methods (`onUpdate` / `onBeforeRender` / `onAfterRender`) don't fire. They resume on the next `enable()`.
+</Callout>
+
+[`setActive(obj, ...)`](/docs/core-guides/set-active) toggles whole subtrees — fires `onEnable` / `onDisable` on every component inside. The object's active state takes priority over the component's own `enabled`: an enabled component on an inactive-in-hierarchy object sits idle. By default every object is active; `setActive` is the opt-in switch for parts of the hierarchy. See the [setActive guide](/docs/core-guides/set-active) for the full story.
+
+## Destroy
+
+Pass a component to [`destroy(comp)`](/docs/api/operations) to destroy it:
+
+- `onDisable()` (if it was enabled) → `onDestroy()` fires.
+- The lifecycle stops; the component unsubscribes from the render loop.
+- The component is removed from the object's component list.
+
+Pass an `Object3D` to [`destroy(obj)`](/docs/api/operations) to destroy every component on `obj` and on its whole subtree. Order: scene-graph traversal (the object itself first, then each descendant), and on each object — components in the order they were added. After every component is destroyed, the object is removed from its parent.
+
+## Cheat sheet
+
+| Hook | When | Component | Module |
+|---|---|---|---|
+| `onAwake` | Once, on first activation | ✓ | ✓ |
+| `onStart` | Once, after `onAwake` (and after `onEnable` on components) | ✓ | ✓ |
+| `onEnable` | Each entry into Active | ✓ | — |
+| `onDisable` | Each exit from Active | ✓ | — |
+| `onUpdate` | Each frame, before render | ✓ | ✓ |
+| `onBeforeRender` | Each frame, just before draw | ✓ | ✓ |
+| `onAfterRender` | Each frame, just after draw | ✓ | ✓ |
+| `onDestroy` | Once, on `destroy(...)` | ✓ | — |

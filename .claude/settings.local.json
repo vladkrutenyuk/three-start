@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(grep -r \"traceInclude\\\\|noExternal\\\\|inline\" node_modules/nitro/types*.d.ts)",
+      "Bash(npx tsc:*)",
+      "Bash(grep -r \"remark\\\\|rehype\" node_modules/fumadocs-mdx/dist/*.d.ts)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:fumadocs.dev)",
+      "WebFetch(domain:www.fumadocs.dev)",
+      "Bash(npm info:*)",
+      "Bash(npm view:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/fuma-nama/fumadocs/main/packages/typescript/src/index.ts\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/fuma-nama/fumadocs/main/packages/typescript/src/lib/remark-auto-type-table.ts\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/fuma-nama/fumadocs/main/packages/typescript/src/lib/base.ts\")",
+      "Bash(npm install:*)",
+      "Bash(npx fumadocs-mdx:*)",
+      "Bash(grep -r \"mdxOptions\\\\|remarkPlugins\\\\|defineConfig\" /Users/kvy/Projects/three-start-docs/node_modules/fumadocs-mdx/dist/*.js)",
+      "Bash(grep \"AutoTypeTable\" /Users/kvy/Projects/three-start-docs/content/docs/api/*.mdx)",
+      "Bash(npm uninstall *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('sig:', d.get\\('initializer',{}\\).get\\('signature'\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('has initializer:', 'initializer' in d\\); print\\('methods order:', [m['name'] for m in d.get\\('methods',[]\\)]\\); print\\('events entries:', len\\(d.get\\('events',{}\\).get\\('entries',[]\\)\\)\\)\")",
+      "Bash(curl -s http://localhost:3000/docs/api/three-context)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); ev=d.get\\('events',{}\\); print\\('methods:', [m['name'] for m in d.get\\('methods',[]\\)]\\); print\\('events keys:', list\\(ev.keys\\(\\)\\)\\); print\\('isGeneric:', ev.get\\('isGeneric'\\)\\); print\\('emitterMethods:', [m['name'] for m in ev.get\\('emitterMethods',[]\\)]\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); ev=d.get\\('events',{}\\); print\\('methods count:', len\\(d.get\\('methods',[]\\)\\)\\); print\\('events keys:', list\\(ev.keys\\(\\)\\)\\); print\\('emitterMethods:', [m['name'] for m in ev.get\\('emitterMethods',[]\\)]\\); print\\('entries count:', len\\(ev.get\\('entries',[]\\)\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('class desc:', d.get\\('description', '—'\\)\\); print\\('props:'\\); [print\\(' ', p['name'], '=>', p.get\\('description', '\\(no desc\\)'\\)\\) for p in d.get\\('properties',[]\\)]; print\\('methods:'\\); [print\\(' ', m['name'], '=>', \\(m.get\\('description', '\\(no desc\\)'\\) or ''\\)[:60]\\) for m in d.get\\('methods',[]\\)]\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('class:', d['description'][:120]\\); print\\('ctx:', next\\(p['description'] for p in d['properties'] if p['name']=='ctx'\\)\\)\")",
+      "Bash(python3 -c ' *)"
+    ]
+  }
+}

@@ -1,0 +1,41 @@
+---
+title: TypedEmitter
+description: Lightweight typed event emitter base class. Used by ThreeContext, ContextModule, and Object3DBehaviour.
+---
+
+import doc from './generated/TypedEmitter.json'
+
+`TypedEmitter` is the base class that gives every other class in three-start its event API. [`ThreeContext`](/docs/api/three-context), [`ContextModule`](/docs/api/context-module), and [`Object3DBehaviour`](/docs/api/object3d-behaviour) all extend it.
+
+## What it does
+
+- Wraps an [`eventemitter3`](https://github.com/primus/eventemitter3) instance internally — the proven small/fast emitter, ~1KB minified.
+- **Lazy initialization** — the inner emitter is only allocated on the first `on` / `once`. Classes that extend `TypedEmitter` but never have a subscriber pay only one reference slot per instance.
+- **Type-safe events** via the `<T extends EventMap>` generic. Keys become valid `event` arguments, tuple values type the listener payload.
+- **Encapsulation by design** — `on` / `off` / `once` are public so anyone can subscribe; `emit` is `protected` so only the owning class fires its own events. No external code can fake an event.
+
+```ts
+type HealthEvents = {
+  damaged: [amount: number, source: string];
+  died: [];
+};
+
+class Health extends Object3DBehaviour<HealthEvents> {
+  hp = 100;
+  hit(damage: number, by: string) {
+    this.hp -= damage;
+    this.emit("damaged", damage, by);     // ✅ inside the class
+    if (this.hp <= 0) this.emit("died");  // ✅
+  }
+}
+
+const health = getComponent(player, Health)!;
+health.on("damaged", (amount, by) => console.log(`-${amount} from ${by}`));
+health.emit("damaged", 10, "x");          // ❌ compile error: emit is protected
+```
+
+The default for `T` is `{}` — a class without an explicit event map can't legitimately call `on` / `emit` (compile error from `keyof {} = never`). This is the type-level opt-in pattern.
+
+## Methods
+
+<ApiEmitterMethods data={doc} />

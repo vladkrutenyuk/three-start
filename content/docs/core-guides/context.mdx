@@ -1,0 +1,149 @@
+---
+title: Context
+description: What's on the context and how to use it from components, modules, or top-level code.
+---
+
+[`ThreeContext`](/docs/api/three-context) is the single runtime object every scene gets. It bundles the renderer, scene, camera, animation loop, timer, render pipeline, and event bus into one place. Every [`ContextModule`](/docs/api/context-module) and [`Object3DBehaviour`](/docs/api/object3d-behaviour) sees the same instance.
+
+You don't construct `ThreeContext` directly. [`ThreeStart`](/docs/api/three-start) creates one in its constructor and exposes it as `starter.ctx`. From any component or module, the same instance is `this.ctx`.
+
+```ts
+import * as THREE from "three";
+import { ThreeStart } from "three-start";
+
+const starter = new ThreeStart();
+starter.ctx.scene.add(new THREE.Mesh(geo, mat));
+starter.ctx.camera.position.set(0, 5, 10);
+starter.mount(document.body);
+starter.start();
+```
+
+## What's on it
+
+| Field / method | Purpose |
+|---|---|
+| `ctx.scene` | The root `THREE.Scene`. Add objects directly. |
+| `ctx.camera` | The active `PerspectiveCamera`. Reassigning swaps the camera the render pipeline draws — fires `CameraChanged`. |
+| `ctx.renderer` | The `THREE.Renderer` (default: `WebGPURenderer` with antialiasing). |
+| `ctx.renderPipeline` | The `RenderPipeline` driving the default render call. |
+| `ctx.scenePass` | The `PassNode` for the current scene/camera. Attach post-processing via TSL. |
+| `ctx.modules` | Registered [`ContextModule`](/docs/api/context-module) instances, keyed by name. Read-only at runtime. |
+| `ctx.getDeltaTime()` / `ctx.getTime()` / `ctx.getTimescale()` | Frame-time accessors. Time scaling applies to both. |
+| `ctx.setTimescale(n)` | Set time scale — `1` = realtime, `0` = freeze, `2` = 2× speed. |
+| `ctx.render()` / `ctx.requestRender()` / `ctx.overrideRender(fn)` / `ctx.resetRender()` | Manual render control (see below). |
+| `ctx.on(event, fn)` / `ctx.off(...)` / `ctx.once(...)` | Event bus (see below). |
+| `ctx.canvasContainer` / `ctx.isMounted` / `ctx.isLoopRunning` | Mount and loop status flags. |
+
+Full list with types is in the [`ThreeContext` API reference](/docs/api/three-context).
+
+## Time
+
+Use `ctx.getDeltaTime()` inside any render loop event method (`onUpdate`, `onBeforeRender`, `onAfterRender`) for frame-rate-independent motion. The timer auto-pauses when the page tab loses focus and resumes on return — no extra setup needed.
+
+```ts
+class Move extends Object3DBehaviour {
+  speed = 5;
+  onUpdate() {
+    this.object.position.x += this.speed * this.ctx.getDeltaTime();
+  }
+}
+```
+
+`ctx.getTime()` returns the total elapsed seconds since the loop started, scaled by `timescale`. Use it for any animation parameterised by absolute time — bobbing, oscillation, phase-locked motion across multiple objects:
+
+```ts
+class Bob extends Object3DBehaviour {
+  amplitude = 0.5;
+  frequency = 2;       // cycles per second
+  private baseY = 0;
+
+  onAwake() {
+    this.baseY = this.object.position.y;
+  }
+
+  onUpdate() {
+    const t = this.ctx.getTime();
+    this.object.position.y = this.baseY + Math.sin(t * this.frequency * Math.PI * 2) * this.amplitude;
+  }
+}
+```
+
+`ctx.setTimescale(0)` freezes time across every component and module — `getDeltaTime()` returns 0 and `getTime()` stops advancing — without disabling anything. This is the cleanest "global pause" you can do without touching `setActive` or per-component flags.
+
+```ts
+ctx.setTimescale(0);     // freeze world time
+ctx.setTimescale(1);     // resume
+ctx.setTimescale(0.25);  // bullet-time
+```
+
+## Mounting and the render loop
+
+`mount(container)` and `start()` are independent:
+
+- `starter.mount(el)` attaches the canvas to `el`, starts a `ResizeObserver`, and begins the render loop (unless `manageLoopManually: true`). Fires `Mount`.
+- `starter.start()` runs the bootstrap traversal — modules `onAwake` / `onStart`, then components `onAwake` / `onEnable` / `onStart` on every active-in-hierarchy object.
+
+You can call them in any order. `mount` without `start` gives you a black canvas with the loop running but no module/component lifecycle. `start` without `mount` runs all the lifecycle but never draws.
+
+`runLoop()` / `stopLoop()` start and stop the animation loop independently of mount.
+
+## Events
+
+`ThreeContext` extends [`TypedEmitter`](/docs/api/typed-emitter) and is the central event bus of the runtime. Subscribe via `ctx.on(EventName, listener)`; the event names live on `ThreeContextEvents`:
+
+```ts
+import { ThreeContextEvents } from "three-start";
+
+ctx.on(ThreeContextEvents.Resized, (w, h) => {
+  hudCamera.aspect = w / h;
+  hudCamera.updateProjectionMatrix();
+});
+
+ctx.on(ThreeContextEvents.LoopStop, () => savePauseState());
+```
+
+Common events:
+
+| Event | Payload | When |
+|---|---|---|
+| `Update` / `RenderBefore` / `RenderAfter` | none | Each frame. Components and modules use these via their event methods, but you can subscribe directly when you need finer control. |
+| `Resized` | `width, height` | First mount and every container resize. |
+| `Mount` / `Unmount` | container / none | Canvas attached / detached. |
+| `LoopRun` / `LoopStop` | none | Animation loop started / stopped. |
+| `CameraChanged` | `newCamera, prevCamera` | `ctx.camera = ...` was called. |
+
+Full list with payload tuples is in the [API reference](/docs/api/three-context#events).
+
+Any subscription created inside a component's `onAwake` / `onEnable` should be undone in the matching `onDestroy` / `onDisable`. Modules don't have a destroy hook — listeners installed in `onAwake` live for the context's lifetime, which is what you usually want.
+
+## Manual render control
+
+The default render loop calls `ctx.render()` once per frame. You rarely need to override it, but two escape hatches exist:
+
+```ts
+// Coalesce many state changes into a single out-of-loop draw:
+ctx.requestRender();   // schedules one render on the next frame; multiple calls fold into one
+
+// Replace the rendering implementation entirely:
+ctx.overrideRender(() => {
+  myCustomPipeline.render();
+});
+ctx.resetRender();     // back to the built-in pipeline
+```
+
+Use `requestRender` for editor-style UIs that don't want a continuous loop (set `manageLoopManually: true` in [`ThreeStartOptions`](/docs/api/three-start) and drive `requestRender` from your own dirty-tracking code). Use `overrideRender` if you've built a custom render pipeline (deferred shading, multi-pass, integrated post FX) and want three-start to drive it instead.
+
+## Swapping the camera
+
+```ts
+ctx.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight);
+```
+
+Re-assignment updates the scene pass, attaches the new camera to the scene if it has no parent, recomputes the aspect from the current container, and fires `CameraChanged`. Subscribe to that event from anywhere holding a stale camera reference.
+
+<Cards>
+  <Card title="ThreeContext API" href="/docs/api/three-context" />
+  <Card title="ThreeStart API" href="/docs/api/three-start" />
+  <Card title="Lifecycle" href="/docs/core-guides/lifecycle" />
+  <Card title="TypedEmitter" href="/docs/api/typed-emitter" />
+</Cards>

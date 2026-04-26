@@ -1,0 +1,94 @@
+---
+title: Overview
+description: A minimal foundation for Three.js projects — bootstrap, lifecycle, and a unified component model.
+---
+
+**three-start** is a minimal foundation layer for Three.js. It bootstraps the renderer, scene, camera, animation loop, and resize handling for you, and gives you a single component/lifecycle model to build the rest of your logic on — without replacing anything Three.js already does well.
+
+## No talk, just show me some code!
+```ts
+import * as THREE from "three";
+import { ThreeStart, Object3DBehaviour, addComponent } from "three-start";
+
+const starter = new ThreeStart(); // [!code highlight]
+
+const { scene, camera } = starter.ctx;
+camera.position.set(5, 5, 5);
+camera.lookAt(0, 0, 0);
+
+const cube = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshMatcapMaterial());
+scene.add(cube);
+
+addComponent(cube, Spin); // [!code ++]
+addComponent(cube, Bob); // [!code ++]
+
+starter.mount(document.getElementById("three")!); // [!code highlight]
+starter.start(); // [!code highlight]
+```
+
+<ThreeDemo />
+
+```ts title="Spin.ts"
+class Spin extends Object3DBehaviour {
+  speed = 2;
+  private _initRotY;
+
+  onAwake() {
+    this._initRotY = this.object.rotation.y;
+  }
+
+  onUpdate() {
+    this.object.rotation.y += this.speed * this.ctx.getDeltaTime();
+  }
+
+  onDestroy() {
+    // restore the rotation Spin was started with
+    this.object.rotation.y = this._initRotY;
+  }
+}
+```
+
+```ts title="Bob.ts"
+class Bob extends Object3DBehaviour {
+  amplitude = 0.5;
+  frequency = 2; // cycles per second
+  private baseY = 0;
+
+  onAwake() {
+    this.baseY = this.object.position.y;
+  }
+
+  onUpdate() {
+    const t = this.ctx.getTime();
+    this.object.position.y = this.baseY + Math.sin(t * this.frequency * Math.PI * 2) * this.amplitude;
+  }
+}
+
+```
+
+That snippet above is the entire project. The render loop, frame time (`getDeltaTime()` / `getTime()`), canvas resize, and lifecycle teardown are already wired up — the only code you wrote is the per-component logic itself.
+
+The same handful of operations — `addComponent`, `getComponent`, `setActive`, `destroy` — and the same lifecycle event methods cover every component on every object, at any depth.
+
+
+## What it gives you
+
+- **Zero boilerplate.** Renderer, scene, camera, animation loop, resize — already set up. Mount the canvas and start.
+- **Components on objects.** Write a class that extends `Object3DBehaviour`, override `onUpdate` / `onAwake` / `onDestroy` — attach it to an `Object3D`. The component hooks itself into the loop and the lifecycle.
+- **A single way to turn logic on and off.** `component.enable()/disable()` or `setActive(obj, true/false)` — cascades activation or deactivation through a whole slice of the world, with all its components. No public "handle" methods, no passing references around.
+- **Global systems as context modules.** Input, physics, asset manager, audio live in a `ContextModule` with the same lifecycle. Any component accesses them via `this.modules.<key>`.
+- **Uniform code.** Every component looks the same. You can read someone else's scene at a glance. Teams collaborate more easily. LLMs don't destroy your architecture — they have a clear frame to work within.
+- **Minimal overhead.** Per-frame event subscriptions are created **only if the method is overridden**. An empty component pays nothing for dispatch.
+
+## Who it's for
+
+three-start is for you if you:
+
+- write Three.js in vanilla + OOP, not through React Three Fiber
+- are tired of writing the same bootstrap in every new project
+- want your code to look uniform and stay readable without context
+- are planning a project more complex than a single demo
+- share code, work on a team, or teach others
+- vibe-code and want the AI to stop destroying your architecture a week in
+
+three-start is **not for you** if you prefer the React paradigm in 3D. In that case R3F is a great choice, and these aren't competing tools.

@@ -1,0 +1,134 @@
+---
+title: Сomponents
+description: Patterns for extending Object3DBehaviour — what to override, what's available inside, and how to wire components together.
+---
+
+A component is any class that extends [`Object3DBehaviour`](/docs/api/object3d-behaviour). Override the event methods you care about; ignore the rest. The library subscribes to render loop events **only if you override the matching method** — empty components pay nothing for dispatch.
+
+```ts
+import { Object3DBehaviour } from "three-start";
+
+class Spin extends Object3DBehaviour {
+  speed = 1;
+
+  onUpdate() {
+    this.object.rotation.y += this.speed * this.ctx.getDeltaTime();
+  }
+}
+```
+
+Attach it via [`addComponent(obj, klass)`](/docs/api/operations) — never `new Spin()`. The library has to inject `object`, `ctx`, and the extension hook before lifecycle starts.
+
+## What's available inside
+
+`addComponent(obj, klass)` injects everything the component needs (`_object`, `_ctx`, `_ext`) into the instance immediately after `new klass()`, before any event method runs. So inside any event method body — `onAwake`, `onUpdate`, `onDestroy`, all of them — these accessors are guaranteed to be set:
+
+| Access | What |
+|---|---|
+| `this.object` | The `THREE.Object3D` this component was added to. |
+| `this.ctx` | The shared [`ThreeContext`](/docs/api/three-context) — renderer, scene, camera, timer, events. |
+| `this.modules` | All registered [`ContextModule`](/docs/api/context-module) instances, keyed by name (`this.modules.input`). Type-safe if you augment `ThreeStartRegister` — see [TypeScript → module registry](/docs/core-guides/typescript#module-registry). |
+| `this.enabled` | Component flag, toggled via `enable()` / `disable()` / `setEnabled()`. Toggling fires `onEnable` / `onDisable` (subject to the [hierarchy gate](/docs/core-guides/set-active#priority-over-enabled)). |
+
+<Callout type="warn">
+  Don't read `this.object` / `this.ctx` / `this.modules` from a **field initializer** or **constructor**. Those run inside `new klass()` — before the library has had a chance to inject anything, so the accessors throw a non-null assertion. Use field initializers for plain data (`speed = 5`) and put any logic that needs the host or the context inside `onAwake`.
+</Callout>
+
+## Picking event methods
+
+The full set, ordered by when they fire on the first activation:
+
+| Method | Fires |
+|---|---|
+| `onAwake()` | Once on first activation, before anything else. One-time setup that depends on `this.object` / `this.ctx`. |
+| `onEnable()` | Each time the component goes from inactive → active (first activation, re-`enable()`, ancestor `setActive(..., true)` cascade). |
+| `onStart()` | Once after `onEnable` on the first activation. Sibling components and modules are ready by now — use for cross-references. |
+| `onUpdate()` | Each frame, before `onBeforeRender`. Game logic, input reads, animation step. |
+| `onBeforeRender()` | Each frame, just before the renderer draws. Uniform updates, custom matrix work that must happen post-input but pre-draw. |
+| `onAfterRender()` | Each frame, immediately after the draw. Post-effects, screenshot capture, frame-late state read-back. |
+| `onDisable()` | Each time the component leaves active state. Pair with `onEnable` for symmetric resource management. |
+| `onDestroy()` | Once when [`destroy(comp)`](/docs/api/operations) (or destroying the host object) runs. Pair with `onAwake` — release any external listeners, geometries, requests created there. |
+
+The render loop event methods (`onUpdate` / `onBeforeRender` / `onAfterRender`) only dispatch on **enabled, active-in-hierarchy** components. See [Lifecycle](/docs/core-guides/lifecycle) for full ordering rules and [setActive](/docs/core-guides/set-active) for hierarchy gating.
+
+<Callout type="info">
+  Don't override an event method just because you can — override only what you actually use. The dispatcher subscribes per overridden method, so empty overrides cost real frames over time.
+</Callout>
+
+## Talking to other components
+
+Use the top-level [`getComponent`](/docs/api/operations) / [`getComponents`](/docs/api/operations) helpers. From inside another component on the same object:
+
+```ts
+import { Object3DBehaviour, getComponent } from "three-start";
+
+class Health extends Object3DBehaviour { hp = 100; }
+
+class HitFlash extends Object3DBehaviour {
+  private health!: Health;
+
+  onStart() {
+    this.health = getComponent(this.object, Health)!; // safe by onStart — sibling has finished onAwake
+  }
+}
+```
+
+Use `onStart` (not `onAwake`) for cross-references — by `onStart`, every sibling component on every active object has already gone through `onAwake`, so the read order is well-defined.
+
+## Talking to modules
+
+Modules are global. Read them from `this.modules.<key>`:
+
+```ts
+class PlayerControl extends Object3DBehaviour {
+  speed = 5;
+
+  onUpdate() {
+    const { input } = this.modules;
+    if (input.isPressed("KeyD")) this.object.position.x += this.speed * this.ctx.getDeltaTime();
+  }
+}
+```
+
+Augment [`ThreeStartRegister`](/docs/core-guides/typescript#module-registry) once and `this.modules.input` is fully typed — see the TypeScript guide.
+
+## Emitting your own events
+
+`Object3DBehaviour` extends [`TypedEmitter`](/docs/api/typed-emitter). Pass an event map as a generic, then `emit` / `on` / `off` are typed:
+
+```ts
+type HealthEvents = {
+  damaged: [amount: number];
+  died: [];
+};
+
+class Health extends Object3DBehaviour<HealthEvents> {
+  hp = 100;
+
+  damage(n: number) {
+    this.hp -= n;
+    this.emit("damaged", n);
+    if (this.hp <= 0) this.emit("died");
+  }
+}
+
+// from another component:
+const h = getComponent(this.object, Health)!;
+h.on("died", () => this.spawnExplosion());
+```
+
+`onDestroy` clears every listener registered on the component itself — you don't need to manually unsubscribe consumers from a destroyed component.
+
+## Things to remember
+
+- **Construction is private to the lib.** Always use `addComponent(obj, klass)`. The class needs no constructor unless you have non-default initial state — and even then, prefer field initializers (`speed = 5`) so the lib can call `new klass()` with zero arguments.
+- **Pair your event methods.** Anything you allocate in `onAwake` belongs in `onDestroy`. Anything you subscribe to in `onEnable` belongs in `onDisable`. Symmetry keeps `setActive` toggling clean.
+- **Always clean up in `onDestroy`.** Every resource the component allocated during its lifecycle — DOM listeners, `ctx` event subscriptions, raycasters, `THREE.BufferGeometry` / `Material` / `Texture` instances you created, timers, fetch controllers, RAF handles, audio nodes — must be released or unsubscribed in `onDestroy`. The library doesn't track or auto-dispose any of it for you (component-internal `TypedEmitter` listeners are the only thing cleared automatically). Leaks here grow silently with every spawn/destroy cycle.
+- **`onUpdate` runs every single frame.** That's 60–120+ calls per second per active component. Keep it lean: precompute heavy math once in `onAwake` / `onStart`, cache references, allocate vectors/matrices as fields and reuse them. **Never** `new THREE.Vector3()` inside `onUpdate`, never load assets, never query the scene by name, never construct `RegExp` / `new Date()`. The same rule applies to `onBeforeRender` / `onAfterRender`.
+
+<Cards>
+  <Card title="Lifecycle in detail" href="/docs/core-guides/lifecycle" />
+  <Card title="setActive — subtree control" href="/docs/core-guides/set-active" />
+  <Card title="Writing a module" href="/docs/core-guides/writing-modules" />
+  <Card title="Object3DBehaviour API" href="/docs/api/object3d-behaviour" />
+</Cards>

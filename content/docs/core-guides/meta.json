@@ -1,0 +1,4 @@
+{
+  "pages": ["lifecycle", "set-active", "writing-component", "writing-modules", "context", "typescript"],
+  "defaultOpen": true
+}

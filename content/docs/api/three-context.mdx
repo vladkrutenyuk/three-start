@@ -1,0 +1,28 @@
+---
+title: ThreeContext
+description: The shared runtime for a scene — renderer, camera, loop, events, and modules.
+---
+
+import doc from './generated/ThreeContext.json'
+
+`ThreeContext` is the single runtime object for a scene. It holds the renderer, scene, camera, animation loop, timer, and event bus.
+
+You don't construct `ThreeContext` directly — it's created automatically inside [`ThreeStart`](/docs/api/three-start) and exposed via its [`ctx`](/docs/api/three-start#properties) field.
+
+<Callout type="info">
+  Every [`Object3DBehaviour`](/docs/api/object3d-behaviour) and [`ContextModule`](/docs/api/context-module) instance has access to the same context via `this.ctx`.
+</Callout>
+
+## Properties
+
+<ApiProperties data={doc} />
+
+## Methods
+
+<ApiMethods data={doc} />
+
+## Events
+
+`ThreeContext` extends [`TypedEmitter`](/docs/api/typed-emitter) and acts as the central **event bus** of the runtime — subscribe via `ctx.on(...)`, unsubscribe via `ctx.off(...)`. Events are typed by `ThreeContextEventMap` below.
+
+<ApiEvents data={doc} />

@@ -1,0 +1,154 @@
+---
+title: Modules
+description: Patterns for extending ContextModule — global systems registered before start() that components and other modules can read.
+---
+
+Use a module when you have logic that lives for the entire 3D-app lifetime AND is shared between components (or other modules). Input, physics, audio, asset loading, scoring, networking — anything that exists once and gets read from everywhere — fits here.
+
+A module is any class extending [`ContextModule`](/docs/api/context-module). It has the same render loop event methods as a component, plus `onAwake` and `onStart`.
+
+```ts
+import { ContextModule } from "three-start";
+
+class InputModule extends ContextModule {
+  private keys = new Set<string>();
+
+  onAwake() {
+    window.addEventListener("keydown", (e) => this.keys.add(e.code));
+    window.addEventListener("keyup", (e) => this.keys.delete(e.code));
+  }
+
+  isPressed(code: string) {
+    return this.keys.has(code);
+  }
+}
+```
+
+## Registering
+
+Pass instances to [`starter.addModules({...})`](/docs/api/three-start) **before** `start()`:
+
+```ts
+const starter = new ThreeStart()
+  .addModules({
+    input: new InputModule(),
+    audio: new AudioModule(),
+  });
+
+starter.start();
+```
+
+`addModules` can be called multiple times — registrations accumulate. Order matters: modules awake in the order they were registered, and a later module's `onAwake` can call methods on previously-registered ones via `this.modules.<key>`.
+
+<Callout type="warn">
+  After `start()`, `addModules` throws. Modules participate in the bootstrap traversal; they cannot be added once it has run.
+</Callout>
+
+## What's available inside
+
+| Access | What |
+|---|---|
+| `this.ctx` | The shared [`ThreeContext`](/docs/api/three-context). Available from `onAwake`. |
+| `this.modules` | Sibling modules, keyed by registration name (`this.modules.input`). Available from `onAwake` (own and earlier-registered) and from `onStart` (every module). |
+
+
+## Lifecycle
+
+Modules have a smaller surface than components — they're always on, can't be disabled, can't be destroyed:
+
+| Method | Fires |
+|---|---|
+| `onAwake()` | Once during `start()`, before any component lifecycle. Subscribe to DOM events, allocate buffers, kick off async loads. |
+| `onStart()` | Once after every module has awakened. Use for cross-module wiring that requires other modules to be ready. |
+| `onUpdate()` | Each frame, **before any component's `onUpdate`**. Drive global state per frame — clear last-frame buffers, advance physics, etc. |
+| `onBeforeRender()` | Each frame, before the renderer draws. Before any component's `onBeforeRender`. |
+| `onAfterRender()` | Each frame, after the draw. Before any component's `onAfterRender`. |
+
+The "modules first" guarantee means a component's `onUpdate` always sees state mutated in the same frame's module `onUpdate`. See [Lifecycle](/docs/core-guides/lifecycle) for the ordering rules.
+
+<Callout type="info">
+  Like components, render loop event methods are subscribed **only if you override them**. A module without `onUpdate` doesn't pay for dispatch.
+</Callout>
+
+## Cross-module wiring
+
+`onAwake` is for self-init that doesn't need anyone else. `onStart` is for hooks that depend on siblings being ready:
+
+```ts
+class AudioModule extends ContextModule {
+  private listener!: THREE.AudioListener;
+
+  onAwake() {
+    this.listener = new THREE.AudioListener();
+    this.ctx.camera.add(this.listener);
+  }
+
+  onStart() {
+    // every module finished onAwake by now — assets module can hand us its registry
+    const buffers = this.modules.assets.getAll<AudioBuffer>("audio/*");
+    // ...
+  }
+}
+```
+
+If two modules genuinely need each other in `onAwake`, register them in the right order — the earlier one is fully awake before the later one runs.
+
+## Emitting events from a module
+
+`ContextModule` extends [`TypedEmitter`](/docs/api/typed-emitter). Same pattern as components — pass an event map as a generic:
+
+```ts
+type ScoreEvents = {
+  changed: [score: number];
+  highscore: [score: number, prev: number];
+};
+
+class ScoreModule extends ContextModule<ScoreEvents> {
+  private score = 0;
+  private high = 0;
+
+  add(n: number) {
+    this.score += n;
+    this.emit("changed", this.score);
+    if (this.score > this.high) {
+      const prev = this.high;
+      this.high = this.score;
+      this.emit("highscore", this.score, prev);
+    }
+  }
+}
+
+// from any component:
+this.modules.score.on("highscore", (s, prev) => this.celebrate(s - prev));
+```
+
+## Type safety: register the module map
+
+Without augmentation, `this.modules` falls back to `Record<string, ContextModule>` — every key is loose, every access is generically-typed. Add the registry once in your project and `this.modules.input` becomes fully typed everywhere:
+
+```ts
+declare module "three-start" {
+  interface ThreeStartRegister {
+    modules: {
+      input: InputModule;
+      audio: AudioModule;
+      score: ScoreModule;
+    };
+  }
+}
+```
+
+See [TypeScript → module registry](/docs/core-guides/typescript#module-registry) for the full pattern, including how the same registry powers `addModules` autocomplete at the call site.
+
+## Things to remember
+
+- **No `onEnable` / `onDisable` / `onDestroy`.** Modules don't toggle and don't get destroyed by the lib — they're meant for app-lifetime logic. If you need a temporary system, that's a component.
+- **`onUpdate` / `onBeforeRender` / `onAfterRender` run every frame.** Same rule as in components — keep them lean, don't allocate or initialise inside.
+- **No destroy hook means cleanup is on you.** If your module owns resources that must be released (DOM listeners are usually fine to leave for the page lifetime, but websocket sockets, audio nodes, etc. may not be), subscribe a `Unmount` or `LoopStop` handler via `this.ctx.on(...)` and tear them down there. `starter.dispose()` fires both.
+
+<Cards>
+  <Card title="Lifecycle in detail" href="/docs/core-guides/lifecycle" />
+  <Card title="Writing a component" href="/docs/core-guides/writing-component" />
+  <Card title="ContextModule API" href="/docs/api/context-module" />
+  <Card title="TypeScript guide" href="/docs/core-guides/typescript" />
+</Cards>
