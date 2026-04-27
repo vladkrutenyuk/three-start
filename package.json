@@ -56,16 +56,19 @@
   "scripts": {
     "dev": "npm run docs:gen && vite dev",
     "build": "vite build",
+    "postbuild": "cp dist/client/_shell.html dist/client/index.html && rm -f dist/client/_redirects",
     "build:lib": "vite build --config vite.lib.config.ts && tsc -p tsconfig.lib.json",
     "start": "serve .output/public --config ../../serve.json",
-    "preview": "vite preview",
+    "preview": "npm run build && wrangler dev",
     "docs:gen": "tsx scripts/gen-api-docs.ts",
     "prebuild": "tsx scripts/gen-api-docs.ts",
     "types:check": "fumadocs-mdx && tsc --noEmit",
     "prepare": "fumadocs-mdx || true",
     "prepublishOnly": "npm run build:lib",
     "lint": "biome check",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "deploy": "npm run build && wrangler deploy",
+    "cf-typegen": "wrangler types"
   },
   "peerDependencies": {
     "@types/three": ">=0.183.0",
@@ -95,17 +98,16 @@
     "lucide-react": "^1.8.0",
     "mermaid": "^11.14.0",
     "next-themes": "^0.4.6",
-    "nitro": "^3.0.260311-beta",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "serve": "^14.2.6",
-    "srvx": "^0.11.15",
     "tailwind-merge": "^3.5.0",
     "tailwindcss": "^4.2.2",
     "three": "0.183.2",
     "ts-morph": "^28.0.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
-    "vite": "^8.0.8"
+    "vite": "^8.0.8",
+    "wrangler": "^4.85.0"
   }
 }

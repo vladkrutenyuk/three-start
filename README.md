@@ -1,8 +1,11 @@
 # three-start
 
 [![npm](https://img.shields.io/npm/v/three-start.svg)](https://npmjs.com/package/three-start)
-[![license](https://img.shields.io/npm/l/three-start.svg)](LICENSE)
 [![types](https://img.shields.io/npm/types/three-start.svg)](#)
+[![minzip](https://badgen.net/bundlephobia/minzip/three-start)](https://bundlephobia.com/package/three-start)
+[![GitHub](https://img.shields.io/github/stars/vladkrutenyuk/three-start?style=social)](https://github.com/vladkrutenyuk/three-start)
+[![Twitter](https://img.shields.io/twitter/follow/vladkrutenyuk
+)](https://x.com/vladkrutenyuk)
 
 A minimal foundation layer for [Three.js](https://threejs.org/). It bootstraps the renderer, scene, camera, animation loop, and resize handling for you, and gives you a single component / lifecycle model to build the rest of your logic on — without replacing anything Three.js already does well.
 
