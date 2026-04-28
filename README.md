@@ -113,11 +113,11 @@ three-start is **not for you** if you prefer the React paradigm in 3D. In that c
 
 Full guides, API reference, and live examples live at **https://three-start.com**:
 
+- [Components](https://three-start.com/docs/core-guides/components)
+- [Modules](https://three-start.com/docs/core-guides/writing-modules)
+- [Context](https://three-start.com/docs/core-guides/context)
 - [Lifecycle](https://three-start.com/docs/core-guides/lifecycle) — when components and modules become active, tick, and are destroyed.
 - [setActive](https://three-start.com/docs/core-guides/set-active) — `activeSelf` / `activeInHierarchy` semantics for toggling whole subtrees.
-- [Writing a component](https://three-start.com/docs/core-guides/writing-component)
-- [Writing a module](https://three-start.com/docs/core-guides/writing-modules)
-- [Context](https://three-start.com/docs/core-guides/context)
 - [TypeScript](https://three-start.com/docs/core-guides/typescript)
 - [API reference](https://three-start.com/docs/api/three-start)
 

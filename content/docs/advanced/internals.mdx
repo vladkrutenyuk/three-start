@@ -13,7 +13,7 @@ description: Technical reference for maintainers/contributors. Covers state, lif
 | `Object3DBehaviour` | `Object3DBehaviour.ts` | User-defined component attached to an `Object3D`. Has full lifecycle. |
 | `ContextModule` | `ContextModule.ts` | User-defined global singleton attached to the context. Has a subset of lifecycle. |
 | `TypedEmitter` | `TypedEmitter.ts` | Tiny base providing `on`/`off`/`once` (public) and `emit` (protected). Wraps `eventemitter3` lazily — inner emitter is allocated on first subscription, so unused emitters cost only one nullable slot. Extended by `ThreeContext`, `ContextModule`, `Object3DBehaviour`. |
-| Operations | `methods.ts` | Top-level imperative functions: `addComponent`, `getComponent`, `getComponents`, `setActive`, `getIsActive`, `getIsActiveSelf`, `destroy`, plus re-export of `attachContext`. All delegate into `Object3DExtension`. |
+| Operations | `methods.ts` | Top-level imperative functions: `addComponent`, `getComponent`, `getComponents`, `setActive`, `getIsActive`, `getIsActiveSelf`, `destroy`. All delegate into `Object3DExtension`. (`attachContext` is re-exported from `Object3DExtension.ts` directly via `index.ts`.) |
 
 ## Object3DExtension attachment
 
@@ -159,6 +159,31 @@ _subscribe()
 Subscription is last, so a component's per-frame method can never fire before its own `onStart`.
 
 `_deactivate()` calls `_unsubscribe()` + `onDisable()` and flips `_isActive = false`. `_destroy()` calls `_deactivate()`, then `onDestroy()`, then `_removeAllListeners()` on the inner emitter (provided by `TypedEmitter`), then nulls out back-pointers.
+
+## Component construction and `addComponent` typing
+
+`addComponent(obj, Klass, ...args)` forwards `...args` to `new Klass(...args)`. The constructor parameter types are inferred from the component class via the second type parameter on `Object3DBehaviourConstructor`:
+
+```ts
+type Object3DBehaviourConstructor<
+  T extends Object3DBehaviour = Object3DBehaviour,
+  TArgs extends any[] = any[],
+> = new (...args: TArgs) => T;
+
+function addComponent<T extends Object3DBehaviour, TArgs extends any[]>(
+  obj: THREE.Object3D,
+  klass: Object3DBehaviourConstructor<T, TArgs>,
+  ...args: TArgs
+): T;
+```
+
+Behaviour:
+
+- A component without a custom constructor (`class A extends Object3DBehaviour {}`) infers `TArgs = []`, so `addComponent(obj, A)` requires no extra args.
+- A component with a custom constructor (`class B extends Object3DBehaviour { constructor(x: number, y: string) { super(); ... } }`) infers `TArgs = [number, string]`, and `addComponent(obj, B, 1, "hi")` is type-checked end-to-end (arity, types, optionality).
+- The default `TArgs = any[]` on `Object3DBehaviourConstructor` keeps callers that only need the instance type — `getComponent(obj, MyComp)`, `getComponents(obj, MyComp)` — free of an extra type parameter; their signatures don't need `TArgs` at all.
+
+`Object3DExtension.addComponent` mirrors the same generic and instantiates with `new klass(...args)`. The lifecycle wiring (set `_object` / `_ext` / `_ctx`, push to `components`, conditional `_activate()`) is unchanged regardless of constructor shape — `_object`, `_ctx`, and `_ext` are still assigned **after** the constructor returns, so the existing rule "don't read `this.object` / `this.ctx` from constructors or field initializers" still holds.
 
 ## When does a component activate?
 
@@ -402,11 +427,14 @@ src/core/
 ├── ThreeStart.ts             entry point + lifecycle wrappers
 ├── ThreeContext.ts           shared runtime, sealed fields, modules Proxy, ThreeContextEvents enum + ThreeContextEventMap
 ├── ContextModule.ts          base class for global systems
-├── Object3DBehaviour.ts      base class for components
+├── Object3DBehaviour.ts      base class for components (+ Object3DBehaviourConstructor<T, TArgs>)
 ├── Object3DExtension.ts      per-Object3D sidecar, ensureExtension/getExtension/attachContext
 ├── TypedEmitter.ts           lazy-allocating typed emitter base
 ├── Register.ts               ThreeStartRegister + RegisterField helper
 ├── methods.ts                top-level operations: addComponent / getComponent / setActive / destroy / ...
+├── react/
+│   ├── ThreeRendererMount.tsx  React component that mounts a ThreeStart instance into a div
+│   └── index.ts
 └── utils/
     ├── define-props.ts       defineProps, readOnly, notEnumer, createReadonlyView
     └── assert-defined.ts

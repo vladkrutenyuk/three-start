@@ -1,6 +1,6 @@
 {
   "name": "three-start",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "description": "Minimal foundation layer for Three.js: bootstrap, lifecycle, and a unified component model. A thin layer around Three.js, not a replacement for it.",
   "keywords": [
     "three",
@@ -36,7 +36,8 @@
     "dist",
     "README.md",
     "LICENSE",
-    "llms.txt"
+    "llms.txt",
+    "llms-full.txt"
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -61,7 +62,9 @@
     "start": "serve .output/public --config ../../serve.json",
     "preview": "npm run build && wrangler dev",
     "docs:gen": "tsx scripts/gen-api-docs.ts",
+    "llms:gen": "tsx scripts/gen-llms-txt.ts",
     "prebuild": "tsx scripts/gen-api-docs.ts",
+    "prebuild:lib": "tsx scripts/gen-api-docs.ts && tsx scripts/gen-llms-txt.ts",
     "types:check": "fumadocs-mdx && tsc --noEmit",
     "prepare": "fumadocs-mdx || true",
     "prepublishOnly": "npm run build:lib",
