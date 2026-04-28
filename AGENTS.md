@@ -1,3 +1,65 @@
+# Maintenance & Build Pipelines
+
+There are only **three commands** the maintainer ever needs to run by hand. Everything else (`prebuild`, `prebuild:lib`, `prepublishOnly`, `prepare`) is wired to npm lifecycle hooks and runs automatically.
+
+| Goal | Command |
+|---|---|
+| Local development (web app + docs) | `npm run dev` |
+| Push the docs site to production | `npm run deploy` |
+| Publish a new library version to npm | `npm publish` (after bumping the version) |
+
+`docs:gen`, `llms:gen`, `build`, `build:lib`, `prebuild`, `prebuild:lib` are **not** run by hand — they fire automatically (or are only useful for debugging individual steps in isolation).
+
+## 1. Local development (web app + docs)
+
+```bash
+npm run dev
+```
+
+Expands to: `docs:gen` (regenerates the API JSON) → `vite dev`. Opens the local site with HMR.
+
+## 2. Deploy the docs site (Cloudflare)
+
+```bash
+npm run deploy
+```
+
+Expands to `npm run build && wrangler deploy`. The `build` step itself is:
+
+```
+prebuild  → tsx scripts/gen-api-docs.ts
+build     → vite build
+postbuild → cp _shell.html → index.html, rm _redirects
+```
+
+To preview the production build locally before pushing:
+
+```bash
+npm run preview     # build + wrangler dev (local CF emulator)
+```
+
+## 3. Publish the library to npm
+
+```bash
+npm publish
+```
+
+npm automatically chains:
+
+```
+prepublishOnly → npm run build:lib
+  prebuild:lib → tsx scripts/gen-api-docs.ts
+                 tsx scripts/gen-llms-txt.ts
+  build:lib    → vite build --config vite.lib.config.ts
+                 tsc -p tsconfig.lib.json
+```
+
+The published tarball ships: `dist/`, `README.md`, `LICENSE`, `llms.txt`, `llms-full.txt`.
+
+`llms.txt` and `llms-full.txt` are generated artifacts (gitignored) — refreshed on every publish by `scripts/gen-llms-txt.ts`, which runs the same Fumadocs `source` loader as the dev/SSR routes via Vite's programmatic API.
+
+---
+
 # Repository Overview
 
 This repo contains three things in one place, kept together for easier sync and maintenance:
