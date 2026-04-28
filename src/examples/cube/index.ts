@@ -3,7 +3,7 @@ import { Object3DBehaviour } from "@/core/Object3DBehaviour";
 import { ThreeStart } from "@/core/ThreeStart";
 import * as THREE from "three/webgpu";
 
-export const starter = new ThreeStart({
+const starter = new ThreeStart({
 	renderer: new THREE.WebGPURenderer({ antialias: true }),
 });
 
@@ -13,6 +13,11 @@ camera.position.set(10, 10, 10);
 camera.lookAt(new THREE.Vector3());
 
 const cube = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+new THREE.MeshStandardMaterial({
+	emissive: "white",
+	emissiveIntensity: 1,
+});
+
 scene.add(cube);
 
 class Spin extends Object3DBehaviour {
@@ -57,3 +62,5 @@ setInterval(() => {
 		addComponent(cube, Spin);
 	}
 }, 1000);
+
+export default starter;

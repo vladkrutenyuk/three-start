@@ -2,13 +2,19 @@ import type { ThreeStart } from "@/core/ThreeStart";
 
 interface ExampleItem {
 	id: string;
-	loadStarter: () => Promise<{ starter: ThreeStart }>;
+	loadStarter: () => Promise<{ default: ThreeStart }>;
 }
 export const EXAMPLES: ExampleItem[] = [
 	{
-		id: "bonfire",
+		id: "snake",
 		loadStarter: async () => {
-			return await import("./bonfire/index");
+			return await import("./snake/index");
+		},
+	},
+	{
+		id: "particles",
+		loadStarter: async () => {
+			return await import("./particles/index");
 		},
 	},
 	{
@@ -21,12 +27,6 @@ export const EXAMPLES: ExampleItem[] = [
 		id: "sphere",
 		loadStarter: async () => {
 			return await import("./sphere/index");
-		},
-	},
-	{
-		id: "snake",
-		loadStarter: async () => {
-			return await import("./snake/index");
 		},
 	},
 ];

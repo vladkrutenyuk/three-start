@@ -1,0 +1,392 @@
+---
+title: Components
+description: Patterns for extending Object3DBehaviour — what to override, what's available inside, and how to wire components together.
+---
+
+Components are classes that extend [`Object3DBehaviour`](/docs/api/object3d-behaviour). They are one of the core entities in three-start. They live within the 3D object they are attached to, have their own lifecycle, have access to the context, and plug into the main event/render loop. Through components we give 3D objects functionality.
+
+## First component
+
+```ts title="Spin.ts"
+import { Object3DBehaviour } from "three-start";
+
+class Spin extends Object3DBehaviour { // [!code highlight]
+    speed = 2;
+    private _initRotY = 0;
+
+    onAwake() {
+        this._initRotY = this.object.rotation.y;
+    }
+
+    onUpdate() {
+        const dt = this.ctx.getDeltaTime();
+        this.object.rotation.y += dt * this.speed;
+    }
+
+    onDestroy() {
+        this.object.rotation.y = this._initRotY;
+    }
+}
+```
+
+`onAwake` fires at the start of the lifecycle. `onUpdate` fires every frame (before rendering), and `onDestroy` is called when the component is destroyed. So we just override the built-in event methods and don't have to manually track the lifecycle or organize our own animation/render loop. It's all already wired up!
+
+<Callout type="info">
+Components are added strictly through the `addComponent` factory. It returns the instance of the created component.
+</Callout>
+
+```ts
+import * as THREE from "three";
+import { addComponent, ThreeStart } from "three-start";
+import { Spin } from "./Spin.ts";
+
+const startInstance = new ThreeStart();
+
+const cube = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshMatcapMaterial());
+startInstance.ctx.add(cube);
+
+const spin = addComponent(cube, Spin); // [!code ++]
+
+startInstance.start();
+```
+
+<Callout type="warn">
+Don't forget that the component's lifecycle (first activation) starts on the condition that the component's object has been added to the context's scene **and** `start()` has been called on the `ThreeStart` instance. The order of these two actions doesn't matter. See [Lifecycle](/docs/core-guides/lifecycle) for details.
+</Callout>
+
+<Callout type="info">
+In the examples that follow we'll keep using the same `cube` variable as our example 3D object, implied to already be added to the context's scene. We also assume `start()` has already been called.
+</Callout>
+
+## Component with constructor parameters
+
+If you want, you can declare any parameters in your component's constructor. This makes the component more versatile and easier to reuse.
+
+```ts title="Spin.ts"
+import * as THREE from "three";
+import { Object3DBehaviour } from "three-start";
+
+type Axis = "x" | "y" | "z";
+
+class Spin extends Object3DBehaviour {
+    speed: number;
+    axes: Axis[];
+    private _initRot = new THREE.Euler();
+
+    constructor(axes: Axis[], speed = 2) { // [!code highlight]
+        super(); // [!code highlight]
+        this.axes = axes;
+        this.speed = speed;
+    }
+
+    onAwake() {
+        this._initRot.copy(this.object.rotation);
+    }
+
+    onUpdate() {
+        const dt = this.ctx.getDeltaTime();
+        for (const axis of this.axes) {
+            this.object.rotation[axis] += dt * this.speed;
+        }
+    }
+
+    onDestroy() {
+        this.object.rotation.copy(this._initRot);
+    }
+}
+```
+
+When adding such a component, you have to pass the required arguments:
+
+```ts
+const spin = addComponent(cube, Spin, ["y"]);
+```
+
+Or like this, since the second parameter is optional:
+
+```ts
+const spin = addComponent(cube, Spin, ["y"], 1.5);
+```
+
+<Callout type="success">
+The argument types are inferred from the component class — you get full TypeScript autocomplete and arity/type checking on the `...args` of `addComponent`.
+</Callout>
+
+
+## Reading components off an object
+We can add any number of components to an object, including duplicates of the same class:
+
+```ts
+class Bob extends Object3DBehaviour {
+    // ...
+}
+
+addComponent(cube, Spin, ["x", "z"], 0.5);
+addComponent(cube, Spin, ["y"], 1.5);
+
+addComponent(cube, Bob);
+```
+
+You get back an array in the order the components were added:
+
+```ts
+const components = getComponents(cube);
+//      ^? [Spin, Spin, Bob]
+```
+
+Filter by a specific class:
+
+```ts
+const spins = getComponents(cube, Spin);
+//      ^? [Spin, Spin]
+
+const bob = getComponent(cube, Bob);
+//    ^? Bob
+```
+
+## Destroying a component
+
+When `destroy` is called on the `Bob` component, its `onDisable` → `onDestroy` fire and it is removed from the object's component list.
+
+```ts
+const before = getComponents(cube);
+//      ^? [Spin, Spin, Bob]
+
+destroy(getComponent(cube, Bob)!);
+
+const after = getComponents(cube);
+//      ^? [Spin, Spin]
+```
+
+`destroy` can also be called on a 3D object. This destroys all components on it and on its descendants in scene-graph order (via `traverse`):
+
+```ts
+destroy(cube);
+
+const components = getComponents(cube);
+//      ^? []
+```
+
+<Callout type="error">
+Remember that `destroy` called on an object will destroy all components on every one of its descendants too.
+</Callout>
+
+<Callout type="warn">
+`destroy` is the final point of a component instance's life. If you need the functionality back, you have to add it again via `addComponent`, which creates a new instance.
+</Callout>
+
+## Enabling and disabling components
+
+If you need to switch a component's functionality on and off, the recommended approach is the built-in `enable()` / `disable()` mechanism. When enabled, `onEnable` fires; when disabled, `onDisable` fires. Also keep in mind that at the start of a component's lifecycle, `onEnable` fires too — in the sequence `onAwake` → `onEnable` → `onStart`.
+
+<Callout type="info">
+`onAwake` and `onStart` fire only **once** during a component's lifetime, unlike `onEnable`, which fires every time the component is enabled.
+</Callout>
+
+<Callout type="success">
+Render-loop events (`onUpdate`, `onBeforeRender`, `onAfterRender`) stop firing on a component while it is disabled, and resume as soon as it is enabled again.
+</Callout>
+
+Example:
+
+```ts title="OverheadLight.ts"
+import * as THREE from "three";
+import { Object3DBehaviour } from "three-start";
+
+class OverheadLight extends Object3DBehaviour {
+    private _light = new THREE.PointLight();
+
+    onAwake() {
+        this._light.intensity = 0;
+        this.object.add(this._light);
+    }
+
+    onEnable() { // [!code highlight]
+        this._light.intensity = 1;
+    }
+
+    onDisable() { // [!code highlight]
+        this._light.intensity = 0;
+    }
+
+    onDestroy() {
+        this._light.removeFromParent();
+        this._light.dispose();
+    }
+}
+
+const ideaLump = addComponent(cube, OverheadLight);
+// -> onEnable -> intensity = 1
+
+ideaLump.disable(); // -> onDisable -> intensity = 0
+
+ideaLump.enable(); // -> onEnable -> intensity = 1
+
+// etc.
+```
+
+## Accessing modules
+
+Context modules are an important part of how components work. For example, imagine we've registered an `InputSystem` module under the key `input`, which exposes an arrow function `isPressed: (key: string) => boolean` — calling it tells you whether a given key is currently held down.
+
+```ts
+import { InputSystem } from "./InputSystem.ts";
+
+new ThreeStart().addModules({ input: new InputSystem() });
+```
+
+You can read more about modules in [Writing modules](/docs/core-guides/writing-modules).
+
+And then we write, say, a `PlayerControls` component:
+
+```ts title="PlayerControls.ts"
+class PlayerControls extends Object3DBehaviour {
+    constructor(public speed = 3) {
+        super();
+    }
+
+    onUpdate() {
+        const dt = this.ctx.getDeltaTime();
+        const objPos = this.object.position;
+        const key = this.modules.input.isPressed; // [!code highlight]
+        if (key("KeyD")) objPos.x += this.speed * dt;
+        if (key("KeyA")) objPos.x -= this.speed * dt;
+        if (key("KeyW")) objPos.z -= this.speed * dt;
+        if (key("KeyS")) objPos.z += this.speed * dt;
+    }
+}
+```
+
+```ts
+const player = new THREE.Group();
+const controls = addComponent(player, PlayerControls);
+```
+
+<Callout type="success">
+The lifecycle is structured so that `onAwake` and `onStart` of modules always fire before those of components. So when you reach for a module from a component, you can rely on it being ready to use.
+</Callout>
+
+<Callout type="success">
+Likewise, every render-loop event fires first on modules, then on components.
+</Callout>
+
+## Communication between components
+
+### Emitting your own events
+
+`Object3DBehaviour` extends [`TypedEmitter`](/docs/api/typed-emitter). Pass an event map as a generic, then `emit` / `on` / `off` / `once` are typed:
+
+```ts title="Health.ts"
+type HealthEvents = {
+    damaged: [amount: number];
+    died: [];
+};
+
+class Health extends Object3DBehaviour<HealthEvents> {
+    constructor(private _hp = 100) {
+        super();
+    }
+
+    damage(n: number) {
+        this._hp -= n;
+        this.emit("damaged", n); // [!code ++]
+        if (this._hp <= 0) {
+            this.emit("died"); // [!code ++]
+        }
+    }
+}
+```
+
+And here's how it's used. For example, we want a barrel to explode when it's damaged:
+
+```ts
+const h = addComponent(barrelObj, Health, 20);
+h.on("died", () => spawnExplosion(barrelObj.position));
+```
+
+<Callout type="success">
+`onDestroy` clears every listener registered on the component itself — you don't need to manually unsubscribe consumers from a destroyed component.
+</Callout>
+
+### Reaching for other components
+
+For example, say we have a `Shooting` component that does a raycast against targets. The raycast / shooting implementation details are deliberately omitted here, otherwise the example would get long and the focus on the library itself would be lost.
+
+```ts title="Shooting.ts"
+class Shooting extends Object3DBehaviour {
+    damageAmount = 20;
+
+    // ...
+
+    private handleRaycast(obj: THREE.Object3D) {
+        const h = getComponent(obj, Health); // [!code highlight]
+        if (!h) return;
+        h.damage(this.damageAmount);
+    }
+
+    // ...
+}
+```
+
+### Adding components from inside a component
+
+A "composite" component that builds combined functionality out of separate components — or a component spawned dynamically at runtime:
+
+```ts title="PlayerBehaviour.ts"
+class PlayerBehaviour extends Object3DBehaviour {
+    onAwake() {
+        addComponent(this.object, PlayerControls);
+        addComponent(this.object, CameraControls);
+        const blood = addComponent(this.object, BloodParticles);
+        const h = addComponent(this.object, Health);
+
+        h.on("damaged", (value) => {
+            blood.burst(value);
+        });
+
+        h.once("died", () => {
+            addComponent(this.object, DiedEffect);
+        });
+    }
+}
+```
+
+## Recap: what you have inside a component
+
+| Member | What it is |
+|---|---|
+| `this.object` | The 3D object the component was attached to. Stays the same for the entire lifetime of the component. |
+| `this.ctx` | The [`ThreeContext`](/docs/api/three-context). Exposes the core three.js bits (`scene`, `camera`, `renderer`, `renderPipeline`, …) plus helpers like `getDeltaTime()` / `getTime()` that are handy for updates and animations. |
+| `this.modules` | Access to the registered modules ([`ContextModule`](/docs/api/context-module)). |
+| `this.enabled` | Read-only flag indicating whether the component is enabled. |
+
+<Callout type="error">
+Don't read `this.object` from a **field initializer** or a **constructor**. Initialization happens inside `addComponent`, and `this.object` is only assigned after the constructor finishes.
+</Callout>
+
+<Callout type="error">
+Don't read `this.ctx` / `this.modules` from a **field initializer** or **constructor** either — and avoid using them before `onAwake` in general. The context and its modules become available only once the context is attached, which happens as soon as the component's object lands in the context's scene hierarchy.
+</Callout>
+
+## Picking event methods
+
+The full set, ordered by when they fire on the first activation:
+
+| Method | Fires |
+|---|---|
+| `onAwake()` | Once on first activation, before anything else. One-time setup that depends on `this.object` / `this.ctx`. |
+| `onEnable()` | Each time the component goes from inactive → active (first activation, re-`enable()`, ancestor `setActive(..., true)` cascade). |
+| `onStart()` | Once after `onEnable` on the first activation. Sibling components and modules are ready by now — use for cross-references. |
+| `onUpdate()` | Each frame, before `onBeforeRender`. Game logic, input reads, animation step. |
+| `onBeforeRender()` | Each frame, just before the renderer draws. Uniform updates, custom matrix work that must happen post-input but pre-draw. |
+| `onAfterRender()` | Each frame, immediately after the draw. Post-effects, screenshot capture, frame-late state read-back. |
+| `onDisable()` | Each time the component leaves active state. Pair with `onEnable` for symmetric resource management. |
+| `onDestroy()` | Once when [`destroy(comp)`](/docs/api/operations) (or destroying the host object) runs. Pair with `onAwake` — release any external listeners, geometries, requests created there. |
+
+The render-loop event methods (`onUpdate` / `onBeforeRender` / `onAfterRender`) only dispatch on **enabled, active-in-hierarchy** components. See [Lifecycle](/docs/core-guides/lifecycle) for full ordering rules and [setActive](/docs/core-guides/set-active) for hierarchy gating.
+
+## Things to remember
+
+- **Pair your event methods.** Anything you allocate in `onAwake` belongs in `onDestroy`. Anything you subscribe to in `onEnable` belongs in `onDisable`. Symmetry keeps state clean.
+- **Always clean up in `onDestroy`.** Every resource the component allocated during its lifecycle — DOM listeners, `ctx` event subscriptions, raycasters, `THREE.BufferGeometry` / `Material` / `Texture` instances you created, timers, fetch controllers, RAF handles, audio nodes — must be released or unsubscribed in `onDestroy`. The library doesn't track or auto-dispose any of it for you (component-internal `TypedEmitter` listeners are the only thing cleared automatically). Leaks here grow silently with every spawn/destroy cycle.
+- **`onUpdate` runs every single frame.** That's 60–120+ calls per second per active component. Keep it lean: precompute heavy math once in `onAwake` / `onStart`, cache references, allocate vectors/matrices as fields and reuse them. **Never** `new THREE.Vector3()` inside `onUpdate`, never load assets, never query the scene by name, never construct `RegExp` / `new Date()`. The same rule applies to `onBeforeRender` / `onAfterRender`.

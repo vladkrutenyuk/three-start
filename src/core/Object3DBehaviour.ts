@@ -198,6 +198,7 @@ export abstract class Object3DBehaviour<
 	onDestroy() {}
 }
 
-export type Object3DBehaviourConstructor<T extends Object3DBehaviour> = new (
-	...args: ConstructorParameters<typeof Object3DBehaviour>
-) => T;
+export type Object3DBehaviourConstructor<
+	T extends Object3DBehaviour = Object3DBehaviour,
+	TArgs extends any[] = any[],
+> = new (...args: TArgs) => T;

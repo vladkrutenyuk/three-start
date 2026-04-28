@@ -1,12 +1,7 @@
 import type * as THREE from "three";
-import { Object3DBehaviour } from "./Object3DBehaviour";
 import type { Object3DBehaviourConstructor } from "./Object3DBehaviour";
-import {
-	ensureExtension,
-	getExtension,
-	attachContext,
-	isActiveInHierarchy,
-} from "./Object3DExtension";
+import { Object3DBehaviour } from "./Object3DBehaviour";
+import { ensureExtension, getExtension, isActiveInHierarchy } from "./Object3DExtension";
 
 /**
  * Activate or deactivate an Object3D and cascade the change through every descendant
@@ -42,14 +37,16 @@ export function getIsActiveSelf(obj: THREE.Object3D): boolean {
 
 /**
  * Instantiate a component and attach it to the given Object3D.
+ * Extra arguments are forwarded to the component's constructor, with types inferred from it.
  * If context is available and object is active, the full lifecycle fires immediately.
  * Otherwise it will fire when the object joins a hierarchy with context (via ThreeStart).
  */
-export function addComponent<T extends Object3DBehaviour>(
+export function addComponent<T extends Object3DBehaviour, TArgs extends any[]>(
 	obj: THREE.Object3D,
-	klass: Object3DBehaviourConstructor<T>
+	klass: Object3DBehaviourConstructor<T, TArgs>,
+	...args: TArgs
 ): T {
-	return ensureExtension(obj).addComponent(klass);
+	return ensureExtension(obj).addComponent(klass, ...args);
 }
 
 /**
@@ -100,5 +97,3 @@ export function destroy(target: THREE.Object3D | Object3DBehaviour) {
 		target.removeFromParent();
 	}
 }
-
-export { attachContext };

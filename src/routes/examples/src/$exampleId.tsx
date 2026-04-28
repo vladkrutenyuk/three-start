@@ -14,7 +14,8 @@ export const Route = createFileRoute("/examples/src/$exampleId")({
 });
 
 function RouteComponent() {
-	const { starter } = Route.useLoaderData();
-	starter.start();
-	return <ThreeRendererMount className="fixed inset-0" ctx={starter.ctx} />;
+	const data = Route.useLoaderData();
+	const startInstance = data.default;
+	startInstance.start();
+	return <ThreeRendererMount className="fixed inset-0" ctx={startInstance.ctx} />;
 }

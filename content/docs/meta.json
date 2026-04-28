@@ -8,7 +8,7 @@
     "quick-start-v2",
     "quick-start-v3",
     "---Guides & Concepts---",
-    "core-guides/writing-component",
+    "core-guides/components",
     "core-guides/writing-modules",
     "core-guides/context",
     "core-guides/lifecycle",

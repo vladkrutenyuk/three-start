@@ -36,8 +36,11 @@ export class Object3DExtension {
 
 	constructor(public readonly object: THREE.Object3D) {}
 
-	addComponent<T extends Object3DBehaviour>(klass: Object3DBehaviourConstructor<T>): T {
-		const component = new klass();
+	addComponent<T extends Object3DBehaviour, TArgs extends any[]>(
+		klass: Object3DBehaviourConstructor<T, TArgs>,
+		...args: TArgs
+	): T {
+		const component = new klass(...args);
 
 		component._object = this.object;
 		component._ext = this;

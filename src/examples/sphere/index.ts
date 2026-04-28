@@ -1,7 +1,7 @@
 import { ThreeStart } from "@/core/ThreeStart";
 import * as THREE from "three/webgpu";
 
-export const starter = new ThreeStart({
+const starter = new ThreeStart({
 	renderer: new THREE.WebGPURenderer({ antialias: true }),
 });
 
@@ -12,3 +12,5 @@ camera.lookAt(new THREE.Vector3());
 
 const sphere = new THREE.Mesh(new THREE.SphereGeometry(), new THREE.MeshNormalMaterial());
 scene.add(sphere);
+
+export default starter;
