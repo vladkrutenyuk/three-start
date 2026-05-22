@@ -1,6 +1,6 @@
 {
   "name": "three-start",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.4",
   "description": "Minimal foundation layer for Three.js: bootstrap, lifecycle, and a unified component model. A thin layer around Three.js, not a replacement for it.",
   "keywords": [
     "three",

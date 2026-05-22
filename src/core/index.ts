@@ -4,5 +4,6 @@ export * from "./Object3DExtension";
 export * from "./ThreeContext";
 export * from "./ThreeStart";
 export * from "./methods";
+export * from "./Register";
 export * from "./utils/assert-defined";
 export * from "./utils/define-props";
