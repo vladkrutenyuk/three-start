@@ -84,7 +84,7 @@ export class ThreeContext extends TypedEmitter<ThreeContextEventMap> {
 	getTimescale = () => this._timer.getTimescale();
 
 	/** Change the time-scaling factor applied to `getDeltaTime` / `getTime`. `1` = realtime, `0` = paused. */
-	setTimescale = (value: number) => {
+	setTimescale = (value: number): this => {
 		this._timer.setTimescale(value);
 		return this;
 	};
@@ -133,8 +133,8 @@ export class ThreeContext extends TypedEmitter<ThreeContextEventMap> {
 	 * @internal Use `starter.mount(container)` instead.
 	 * Appends the renderer canvas, initializes event listeners and resize observer, fires `Mount`.
 	 */
-	mount(container: HTMLDivElement): this {
-		if (this._isMounted) return this;
+	mount = (container: HTMLDivElement): void => {
+		if (this._isMounted) return;
 		this._isMounted = true;
 
 		const canvas = this.renderer.domElement;
@@ -153,16 +153,14 @@ export class ThreeContext extends TypedEmitter<ThreeContextEventMap> {
 		if (!this.options.manageLoopManually) {
 			this.runLoop();
 		}
-
-		return this;
-	}
+	};
 
 	/**
 	 * @internal Use `starter.unmount()` instead.
 	 * Removes the canvas from DOM, disconnects the resize observer, fires `Unmount`.
 	 */
-	unmount(): this {
-		if (!this._isMounted) return this;
+	unmount = (): void => {
+		if (!this._isMounted) return;
 		this._isMounted = false;
 
 		this._resizeObserver?.disconnect();
@@ -174,16 +172,14 @@ export class ThreeContext extends TypedEmitter<ThreeContextEventMap> {
 		if (!this.options.manageLoopManually) {
 			this.stopLoop();
 		}
-
-		return this;
-	}
+	};
 
 	/**
 	 * @internal Use `starter.runLoop()` instead.
 	 * Starts the render loop; re-runnable after `stopLoop()`.
 	 */
-	runLoop(): this {
-		if (this._isLoopRunning) return this;
+	runLoop = (): void => {
+		if (this._isLoopRunning) return;
 		this._isLoopRunning = true;
 
 		this._timer.connect(document);
@@ -194,15 +190,14 @@ export class ThreeContext extends TypedEmitter<ThreeContextEventMap> {
 			this.render();
 		});
 		this.emit(ThreeContextEvents.LoopRun);
-		return this;
-	}
+	};
 
 	/**
 	 * @internal Use `starter.stopLoop()` instead.
 	 * Stops the render loop; resumable via `runLoop()`.
 	 */
-	stopLoop() {
-		if (!this._isLoopRunning) return this;
+	stopLoop = (): void => {
+		if (!this._isLoopRunning) return;
 		this._isLoopRunning = false;
 
 		this._timer.disconnect();
@@ -210,48 +205,39 @@ export class ThreeContext extends TypedEmitter<ThreeContextEventMap> {
 
 		this.renderer.setAnimationLoop(null);
 		this.emit(ThreeContextEvents.LoopStop);
-		return this;
-	}
+	};
 
 	/**
 	 * @internal Use `starter.dispose()` instead.
 	 * Tears down the context: unmount, stop loop, dispose renderer and timer.
 	 */
-	dispose() {
+	dispose = (): void => {
 		this.unmount();
 		this.stopLoop();
 		this.renderer.dispose();
 		this._removeAllListeners();
 		this._timer.disconnect();
 		this._timer.dispose();
-	}
+	};
 
 	/** Render once using the current render function. Fires `RenderBefore` / `RenderAfter`. */
-	render() {
+	render = (): void => {
 		this.emit(ThreeContextEvents.RenderBefore);
 		this._renderFn();
 		this.emit(ThreeContextEvents.RenderAfter);
-	}
-
-	private _requestAnimationFrame: number | null = null;
-
-	/** Schedule a single render on the next animation frame. Coalesces multiple calls within the same frame. */
-	requestRender = () => {
-		if (this._requestAnimationFrame !== null) return;
-		this._requestAnimationFrame = requestAnimationFrame(this.render);
 	};
 
 	/** Replace the render function with a custom implementation. Restore via `resetRender()`. */
-	overrideRender(fn: () => void) {
+	overrideRender = (fn: () => void): this => {
 		this._renderFn = fn;
 		return this;
-	}
+	};
 
 	/** Restore the default render function (undoes `overrideRender`). */
-	resetRender() {
+	resetRender = (): this => {
 		this._renderFn = this._srcRenderFn;
 		return this;
-	}
+	};
 
 	private resizeHandler = () => {
 		const container = this._canvasContainer;
@@ -286,7 +272,7 @@ export class ThreeContext extends TypedEmitter<ThreeContextEventMap> {
 		newCamera.updateProjectionMatrix();
 
 		this.emit(ThreeContextEvents.CameraChanged, newCamera, prevCamera);
-		this.requestRender();
+		this.render();
 	}
 }
 

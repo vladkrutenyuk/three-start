@@ -134,33 +134,28 @@ export class ThreeStart {
 	}
 
 	/** Append the renderer canvas to a container and wire up resize + render loop (unless `manageLoopManually` is set). Fires `Mount`. */
-	mount(container: HTMLDivElement): this {
+	mount(container: HTMLDivElement): void {
 		this.ctx.mount(container);
-		return this;
 	}
 
 	/** Remove the renderer canvas from DOM, disconnect resize observer. Fires `Unmount`. */
-	unmount(): this {
+	unmount(): void {
 		this.ctx.unmount();
-		return this;
 	}
 
 	/** Start the render loop. Resumable after `stopLoop()`. */
-	runLoop(): this {
+	runLoop(): void {
 		this.ctx.runLoop();
-		return this;
 	}
 
 	/** Stop the render loop. Resumable via `runLoop()`. */
-	stopLoop(): this {
+	stopLoop(): void {
 		this.ctx.stopLoop();
-		return this;
 	}
 
 	/** Tear everything down: unmount, stop loop, dispose renderer and timer. */
-	dispose(): this {
+	dispose(): void {
 		this.ctx.dispose();
-		return this;
 	}
 
 	/**

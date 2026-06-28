@@ -369,7 +369,7 @@ The core has two latent type-level cycles, both kept harmless by `import type`:
 | `stopLoop()` | `ctx.stopLoop()` | Disconnect timer, set animation loop `null`, emit `LoopStop`. |
 | `dispose()` | `ctx.dispose()` | Tear down: unmount, stopLoop, dispose renderer + timer, removeAllListeners. |
 
-This split exists to enforce a clean access boundary: third-party components/modules holding `this.ctx` cannot call `mount`/`runLoop`/etc. by accident or design — the type system simply doesn't expose them. The ThreeStart wrappers are thin: each just forwards to the corresponding `ctx` method and returns `this` for chaining.
+This split exists to enforce a clean access boundary: third-party components/modules holding `this.ctx` cannot call `mount`/`runLoop`/etc. by accident or design — the type system simply doesn't expose them. The ThreeStart wrappers are thin: each just forwards to the corresponding `ctx` method. These are imperative lifecycle commands, so they return `void` (only the setup methods `addModules()` and `start()` return `this` for chaining).
 
 ## Camera swap mechanics
 
@@ -379,7 +379,7 @@ Setting `ctx.camera = newCamera` triggers `cameraChanged(new, prev)` (private), 
 2. If `newCamera.parent === null`, calls `this.scene.add(newCamera)` — matches the constructor behaviour for a floating default camera.
 3. Updates `aspect` from current container dimensions and calls `updateProjectionMatrix()`.
 4. Emits `CameraChanged` with `[newCamera, prevCamera]`.
-5. Calls `requestRender()` to redraw at next frame.
+5. Calls `render()` to redraw immediately.
 
 `PassNode.camera` is a plain instance field read each frame — direct assignment is sufficient, no need to rebuild `scenePass` / `renderPipeline` (both are sealed via `defineProps + readOnly` so couldn't be replaced anyway).
 

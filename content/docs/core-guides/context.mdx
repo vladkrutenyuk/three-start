@@ -30,7 +30,7 @@ starter.start();
 | `ctx.modules` | Registered [`ContextModule`](/docs/api/context-module) instances, keyed by name. Read-only at runtime. |
 | `ctx.getDeltaTime()` / `ctx.getTime()` / `ctx.getTimescale()` | Frame-time accessors. Time scaling applies to both. |
 | `ctx.setTimescale(n)` | Set time scale — `1` = realtime, `0` = freeze, `2` = 2× speed. |
-| `ctx.render()` / `ctx.requestRender()` / `ctx.overrideRender(fn)` / `ctx.resetRender()` | Manual render control (see below). |
+| `ctx.render()` / `ctx.overrideRender(fn)` / `ctx.resetRender()` | Manual render control (see below). |
 | `ctx.on(event, fn)` / `ctx.off(...)` / `ctx.once(...)` | Event bus (see below). |
 | `ctx.canvasContainer` / `ctx.isMounted` / `ctx.isLoopRunning` | Mount and loop status flags. |
 
@@ -118,11 +118,11 @@ Any subscription created inside a component's `onAwake` / `onEnable` should be u
 
 ## Manual render control
 
-The default render loop calls `ctx.render()` once per frame. You rarely need to override it, but two escape hatches exist:
+The default render loop calls `ctx.render()` once per frame. You rarely need to touch it, but two escape hatches exist:
 
 ```ts
-// Coalesce many state changes into a single out-of-loop draw:
-ctx.requestRender();   // schedules one render on the next frame; multiple calls fold into one
+// Draw a single frame on demand (synchronous):
+ctx.render();
 
 // Replace the rendering implementation entirely:
 ctx.overrideRender(() => {
@@ -131,7 +131,7 @@ ctx.overrideRender(() => {
 ctx.resetRender();     // back to the built-in pipeline
 ```
 
-Use `requestRender` for editor-style UIs that don't want a continuous loop (set `manageLoopManually: true` in [`ThreeStartOptions`](/docs/api/three-start) and drive `requestRender` from your own dirty-tracking code). Use `overrideRender` if you've built a custom render pipeline (deferred shading, multi-pass, integrated post FX) and want three-start to drive it instead.
+Call `ctx.render()` directly for editor-style UIs that don't want a continuous loop (set `manageLoopManually: true` in [`ThreeStartOptions`](/docs/api/three-start) and draw from your own dirty-tracking code). Use `overrideRender` if you've built a custom render pipeline (deferred shading, multi-pass, integrated post FX) and want three-start to drive it instead.
 
 ## Swapping the camera
 
