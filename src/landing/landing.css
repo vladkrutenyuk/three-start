@@ -401,6 +401,26 @@
   white-space: nowrap;
 }
 
+.tsl-card[data-active="true"] {
+  border-color: var(--tsl-green-soft);
+  box-shadow:
+    0 0 30px rgba(74, 222, 128, 0.14),
+    inset 0 0 0 1px rgba(74, 222, 128, 0.22);
+}
+
+.tsl-card[data-active="true"]:hover {
+  transform: none;
+}
+
+/* ---------- examples: left rail ---------- */
+
+.tsl-side {
+  background: rgba(5, 8, 6, 0.92);
+  border-right: 1px solid var(--tsl-border);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(154, 170, 160, 0.25) transparent;
+}
+
 /* ---------- examples: viewer chrome ---------- */
 
 .tsl-code-panel {
