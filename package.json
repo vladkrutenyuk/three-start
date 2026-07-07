@@ -80,7 +80,6 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.11",
-    "@newkrok/three-particles": "^3.0.0",
     "@orama/orama": "^3.1.18",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/react-router": "1.168.18",

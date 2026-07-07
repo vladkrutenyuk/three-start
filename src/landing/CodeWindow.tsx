@@ -70,6 +70,31 @@ function tokenizeLine(line: string): ReactNode[] {
   return out;
 }
 
+/** Full source file rendered with the same tokenizer/gutter styling. */
+export function CodeSource({ code }: { code: string }) {
+  const lines = code.replace(/\n+$/, "").split("\n");
+  const gutterWidth = `${String(lines.length).length + 0.4}em`;
+  return (
+    <pre className="tsl-window-body">
+      {lines.map((line, i) => (
+        <div
+          // biome-ignore lint/suspicious/noArrayIndexKey: static list
+          key={i}
+          className="tsl-line"
+        >
+          <span className="tsl-gutter" style={{ width: gutterWidth }}>
+            {i + 1}
+          </span>
+          <span className="tsl-line-text">
+            {tokenizeLine(line)}
+            {line === "" ? " " : null}
+          </span>
+        </div>
+      ))}
+    </pre>
+  );
+}
+
 function renderLine(line: CodeLine): ReactNode {
   switch (line.k) {
     case "cmd":
