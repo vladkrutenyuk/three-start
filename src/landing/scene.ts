@@ -2,7 +2,7 @@
 
 import * as THREE from "three/webgpu";
 import { ContextModule, type ThreeStartModules } from "@/core/ContextModule";
-import { addComponent, setActive } from "@/core/methods";
+import { addComponent, destroy, setActive } from "@/core/methods";
 import { Object3DBehaviour } from "@/core/Object3DBehaviour";
 import { ThreeStart } from "@/core/ThreeStart";
 
@@ -180,6 +180,57 @@ class Materialize extends Object3DBehaviour {
   onUpdate() {
     this._s = THREE.MathUtils.damp(this._s, 1, 2.4, this.ctx.getDeltaTime());
     this.object.scale.setScalar(this._s);
+  }
+}
+
+const easeOutQuint = (k: number) => 1 - (1 - k) ** 5;
+const easeOutBack = (k: number) => {
+  const c1 = 1.70158;
+  return 1 + (c1 + 1) * (k - 1) ** 3 + c1 * (k - 1) ** 2;
+};
+
+/**
+ * One-shot page-load intro: grows the object from zero scale (optionally
+ * fading a material in alongside), then removes itself from the loop.
+ */
+class IntroRise extends Object3DBehaviour {
+  private _t0 = -1;
+
+  constructor(
+    private readonly delay: number,
+    private readonly duration: number,
+    private readonly targetScale: number,
+    private readonly axis: "y" | "xyz",
+    private readonly ease: (k: number) => number,
+    private readonly fade?: { mat: THREE.Material; to: number },
+  ) {
+    super();
+  }
+
+  onAwake() {
+    this.applyScale(0.0001);
+    if (this.fade) {
+      this.fade.mat.transparent = true;
+      this.fade.mat.opacity = 0;
+    }
+  }
+
+  onUpdate() {
+    // measure from the first rendered frame, not from bootstrap
+    if (this._t0 < 0) this._t0 = this.ctx.getTime();
+    const raw = (this.ctx.getTime() - this._t0 - this.delay) / this.duration;
+    const k = THREE.MathUtils.clamp(raw, 0, 1);
+    this.applyScale(Math.max(0.0001, this.targetScale * this.ease(k)));
+    if (this.fade) {
+      this.fade.mat.opacity =
+        this.fade.to * THREE.MathUtils.clamp(raw / 0.7, 0, 1);
+    }
+    if (raw >= 1) destroy(this); // settled — leave the render loop for good
+  }
+
+  private applyScale(s: number) {
+    if (this.axis === "y") this.object.scale.y = s;
+    else this.object.scale.setScalar(s);
   }
 }
 
@@ -458,7 +509,13 @@ export function createLandingScene(container: HTMLDivElement): LandingSceneApi {
   starter.addModules({ scroll, wind } as unknown as Partial<ThreeStartModules>);
 
   // terrain + floor grid
-  scene.add(buildTerrain());
+  const terrain = buildTerrain();
+  scene.add(terrain);
+  // page-load intro: the mountain grows out of the dark
+  addComponent(terrain, IntroRise, 0.15, 2.6, 1, "y", easeOutQuint, {
+    mat: terrain.material as THREE.Material,
+    to: 0.85,
+  });
 
   const grid = new THREE.GridHelper(190, 38, GREEN_DIM, GREEN_DIM);
   grid.position.y = -6.5;
@@ -502,6 +559,8 @@ export function createLandingScene(container: HTMLDivElement): LandingSceneApi {
   );
   traveler.add(travelerCore, travelerShell);
   traveler.scale.setScalar(0.85);
+  // …and the traveler pops in once the ridge is mostly up
+  addComponent(traveler, IntroRise, 1.35, 0.9, 0.85, "xyz", easeOutBack);
   traveler.position.copy(curve.getPointAt(0));
   scene.add(traveler);
   addComponent(traveler, Traveler, scroll, curve, trail, TRAIL_POINTS);

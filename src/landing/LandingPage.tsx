@@ -476,46 +476,52 @@ export function LandingPage() {
               <div data-reveal className="tsl-rule mt-6 w-full max-w-2xl" />
               <p
                 data-reveal
-                className="mt-5 max-w-xl text-sm tracking-[0.08em] text-[var(--tsl-dim)] md:text-base"
+                className="mt-5 max-w-2xl text-lg font-light font-sans scale-x-90 opacity-80 md:text-3xl"
+                style={{
+                  color: "#f2f0ea",
+                }}
               >
                 The missing foundation for Three.js apps
               </p>
-              <p data-reveal className="tsl-hero-note mt-3 max-w-xl">
-                bootstrap · lifecycle · a unified component model —<br />a thin
+              <p
+                data-reveal
+                className="tsl-hero-note mt-3 max-w-xl text-base scale-x-90"
+              >
+                bootstrap / lifecycle / a unified component model —<br />a thin
                 layer around Three.js, not a replacement for it
               </p>
               <button
                 type="button"
                 data-reveal
                 onClick={copyInstall}
-                className="tsl-copy tsl-pill mt-7 px-4 py-2 text-xs tracking-[0.18em]"
+                className="tsl-copy tsl-pill mt-7 px-4 py-2 text-xs tracking-[0.18em] select-none"
                 title="copy"
               >
                 $ npm i three-start{copied ? "  ✓" : ""}
               </button>
-              <div
-                data-reveal
-                className="mt-6 flex flex-wrap justify-center gap-3 md:gap-4"
-              >
-                <Link
-                  to="/docs/$"
-                  params={{ _splat: "" }}
-                  className="tsl-btn tsl-btn-primary"
-                >
-                  Read the docs
-                </Link>
-                <Link to="/examples" className="tsl-btn">
-                  Examples
-                </Link>
-                <a
-                  href={GITHUB_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="tsl-btn"
-                >
-                  GitHub ↗
-                </a>
-              </div>
+              {/* <div
+								data-reveal
+								className="mt-6 flex flex-wrap justify-center gap-3 md:gap-4"
+							>
+								<Link
+									to="/docs/$"
+									params={{ _splat: "" }}
+									className="tsl-btn tsl-btn-primary"
+								>
+									Read the docs
+								</Link>
+								<Link to="/examples" className="tsl-btn">
+									Examples
+								</Link>
+								<a
+									href={GITHUB_URL}
+									target="_blank"
+									rel="noreferrer"
+									className="tsl-btn"
+								>
+									GitHub ↗
+								</a>
+							</div> */}
             </div>
             <div
               ref={hintRef}

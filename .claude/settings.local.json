@@ -1,5 +1,6 @@
 {
   "permissions": {
+     "defaultMode": "bypassPermissions",
     "allow": [
       "Bash(npm run:*)",
       "Bash(grep -r \"traceInclude\\\\|noExternal\\\\|inline\" node_modules/nitro/types*.d.ts)",
