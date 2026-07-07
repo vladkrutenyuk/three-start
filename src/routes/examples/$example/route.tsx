@@ -7,7 +7,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { EXAMPLES, type ExampleItem } from "@/examples/_examples";
 import { CodeSource } from "@/landing/CodeWindow";
-import { gitConfig } from "@/lib/shared";
+import { authorXUrl, gitConfig } from "@/lib/shared";
 import "@/landing/landing.css";
 
 export const Route = createFileRoute("/examples/$example")({
@@ -119,6 +119,10 @@ function TileList({ active, onPick }: { active: string; onPick?: () => void }) {
           rel="noreferrer"
         >
           sources ↗
+        </a>
+        <span aria-hidden>·</span>
+        <a href={authorXUrl} target="_blank" rel="noreferrer">
+          @vladkrutenyuk ↗
         </a>
       </footer>
     </>

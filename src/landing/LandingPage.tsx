@@ -2,7 +2,11 @@
 
 import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { gitConfig } from "@/lib/shared";
+import {
+  gitConfig,
+  kvyverseUrl as KVYVERSE_URL,
+  authorXUrl as X_URL,
+} from "@/lib/shared";
 import { type CodeLine, CodeWindow } from "./CodeWindow";
 import { createLandingScene, type LandingSceneApi } from "./scene";
 import "./landing.css";
@@ -420,6 +424,14 @@ export function LandingPage() {
           <a href={GITHUB_URL} target="_blank" rel="noreferrer">
             GitHub
           </a>
+          <a
+            href={X_URL}
+            target="_blank"
+            rel="noreferrer"
+            title="@vladkrutenyuk on X"
+          >
+            X
+          </a>
         </nav>
       </header>
 
@@ -445,20 +457,11 @@ export function LandingPage() {
           className="relative"
           style={{ height: "150vh" }}
         >
-          <div className="sticky top-0 flex h-screen flex-col items-center justify-center px-4 text-center">
+          <div className="sticky top-0 flex h-screen flex-col items-center justify-start px-4 pt-[10vh] text-center md:pt-[11vh]">
             <div
               data-panel
               className="tsl-panel flex w-full flex-col items-center"
             >
-              <button
-                type="button"
-                data-reveal
-                onClick={copyInstall}
-                className="tsl-copy mb-8 border border-[var(--tsl-border)] px-4 py-2 text-xs tracking-[0.18em] text-[var(--tsl-green)]"
-                title="copy"
-              >
-                $ npm i three-start{copied ? "  ✓" : ""}
-              </button>
               <h1 className="tsl-title" aria-label={TITLE}>
                 {TITLE.split("").map((ch, i) => (
                   <span
@@ -481,6 +484,38 @@ export function LandingPage() {
                 bootstrap · lifecycle · a unified component model —<br />a thin
                 layer around Three.js, not a replacement for it
               </p>
+              <button
+                type="button"
+                data-reveal
+                onClick={copyInstall}
+                className="tsl-copy mt-7 border border-[var(--tsl-border)] px-4 py-2 text-xs tracking-[0.18em] text-[var(--tsl-green)]"
+                title="copy"
+              >
+                $ npm i three-start{copied ? "  ✓" : ""}
+              </button>
+              <div
+                data-reveal
+                className="mt-6 flex flex-wrap justify-center gap-3 md:gap-4"
+              >
+                <Link
+                  to="/docs/$"
+                  params={{ _splat: "" }}
+                  className="tsl-btn tsl-btn-primary"
+                >
+                  Read the docs
+                </Link>
+                <Link to="/examples" className="tsl-btn">
+                  Examples
+                </Link>
+                <a
+                  href={GITHUB_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="tsl-btn"
+                >
+                  GitHub ↗
+                </a>
+              </div>
             </div>
             <div
               ref={hintRef}
@@ -620,6 +655,24 @@ export function LandingPage() {
                   GitHub ↗
                 </a>
               </div>
+              <p data-reveal className="tsl-note mt-10">
+                <span
+                  className="tsl-kicker"
+                  style={{ letterSpacing: "0.22em" }}
+                >
+                  in the field
+                </span>
+                <br />
+                three-start is the scripting foundation of{" "}
+                <a
+                  href={KVYVERSE_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="tsl-hud-value underline decoration-[var(--tsl-green-soft)] underline-offset-4 hover:text-[var(--tsl-green)]"
+                >
+                  kvyverse ↗
+                </a>
+              </p>
             </div>
           </div>
           <footer className="tsl-hud relative z-10 flex flex-wrap items-center justify-center gap-x-3 pb-14 text-center">
@@ -633,6 +686,10 @@ export function LandingPage() {
               rel="noreferrer"
             >
               view source ↗
+            </a>
+            <span aria-hidden>·</span>
+            <a href={X_URL} target="_blank" rel="noreferrer">
+              by @vladkrutenyuk ↗
             </a>
           </footer>
         </section>
