@@ -480,7 +480,7 @@ export function LandingPage() {
               >
                 The missing foundation for Three.js apps
               </p>
-              <p data-reveal className="tsl-note mt-3 max-w-lg">
+              <p data-reveal className="tsl-hero-note mt-3 max-w-xl">
                 bootstrap · lifecycle · a unified component model —<br />a thin
                 layer around Three.js, not a replacement for it
               </p>
@@ -488,7 +488,7 @@ export function LandingPage() {
                 type="button"
                 data-reveal
                 onClick={copyInstall}
-                className="tsl-copy mt-7 border border-[var(--tsl-border)] px-4 py-2 text-xs tracking-[0.18em] text-[var(--tsl-green)]"
+                className="tsl-copy tsl-pill mt-7 px-4 py-2 text-xs tracking-[0.18em]"
                 title="copy"
               >
                 $ npm i three-start{copied ? "  ✓" : ""}
@@ -627,7 +627,7 @@ export function LandingPage() {
                 type="button"
                 data-reveal
                 onClick={copyInstall}
-                className="tsl-copy mt-10 border border-[var(--tsl-border)] px-5 py-2.5 text-sm tracking-[0.18em] text-[var(--tsl-green)]"
+                className="tsl-copy tsl-pill mt-10 px-5 py-2.5 text-sm tracking-[0.18em]"
                 title="copy"
               >
                 $ npm i three-start{copied ? "  ✓" : ""}

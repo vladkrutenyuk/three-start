@@ -1,6 +1,27 @@
-@import 'tailwindcss';
-@import 'fumadocs-ui/css/neutral.css';
-@import 'fumadocs-ui/css/preset.css';
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+@import "@fontsource/instrument-serif/400.css";
+
+/* three-start brand accents (match the landing) */
+:root {
+  --color-fd-primary: #15803d;
+}
+
+.dark {
+  --color-fd-primary: #4ade80;
+  --color-fd-primary-foreground: #06130a;
+}
+
+.font-brand-serif {
+  font-family: "Instrument Serif", "Times New Roman", Georgia, serif;
+  font-weight: 400;
+}
+
+/* code blocks tinted like the landing terminal windows */
+.dark .shiki {
+  background-color: #0a100c !important;
+}
 
 html {
   scrollbar-gutter: stable;

@@ -327,6 +327,36 @@
   user-select: all;
 }
 
+/* highlighted `npm i three-start` pill */
+.tsl-pill {
+  border: 1px solid rgba(74, 222, 128, 0.55);
+  background: rgba(74, 222, 128, 0.09);
+  color: var(--tsl-green);
+  text-shadow: 0 0 10px rgba(74, 222, 128, 0.55);
+  box-shadow:
+    0 0 22px rgba(74, 222, 128, 0.18),
+    inset 0 0 14px rgba(74, 222, 128, 0.07);
+  transition:
+    box-shadow 0.25s,
+    background 0.25s,
+    border-color 0.25s;
+}
+
+.tsl-pill:hover {
+  background: rgba(74, 222, 128, 0.15);
+  border-color: rgba(74, 222, 128, 0.85);
+  box-shadow:
+    0 0 34px rgba(74, 222, 128, 0.3),
+    inset 0 0 18px rgba(74, 222, 128, 0.1);
+}
+
+/* hero description — slightly larger and brighter than a regular note */
+.tsl-hero-note {
+  font-size: 0.82rem;
+  line-height: 1.75;
+  color: var(--tsl-dim);
+}
+
 /* ---------- examples: gallery cards ---------- */
 
 .tsl-card {

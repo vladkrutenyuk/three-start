@@ -8,8 +8,8 @@
  * the JSX tags un-rendered as the default `getText('processed')` does.
  */
 
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import fs from "node:fs/promises";
+import path from "node:path";
 
 interface Param {
   name: string;
@@ -62,8 +62,8 @@ interface ClassDoc {
   hideInitialization?: boolean;
 }
 
-const GENERATED_DIR = path.resolve(process.cwd(), 'content/docs/api/generated');
-const API_PAGES_DIR = path.resolve(process.cwd(), 'content/docs/api');
+const GENERATED_DIR = path.resolve(process.cwd(), "content/docs/api/generated");
+const API_PAGES_DIR = path.resolve(process.cwd(), "content/docs/api");
 
 /**
  * Look at the page's MDX source on disk and pull the ClassDoc JSON it imports
@@ -74,18 +74,18 @@ async function loadDocForSlug(slug: string): Promise<ClassDoc | null> {
   const mdxPath = path.join(API_PAGES_DIR, `${slug}.mdx`);
   let raw: string;
   try {
-    raw = await fs.readFile(mdxPath, 'utf8');
+    raw = await fs.readFile(mdxPath, "utf8");
   } catch {
     return null;
   }
   const importMatch = raw.match(
-    /import\s+doc\s+from\s+['"]\.\/generated\/(\w+)\.json['"]/
+    /import\s+doc\s+from\s+['"]\.\/generated\/(\w+)\.json['"]/,
   );
   if (!importMatch) return null;
   const className = importMatch[1];
   const jsonPath = path.join(GENERATED_DIR, `${className}.json`);
   try {
-    const content = await fs.readFile(jsonPath, 'utf8');
+    const content = await fs.readFile(jsonPath, "utf8");
     return JSON.parse(content) as ClassDoc;
   } catch {
     return null;
@@ -100,7 +100,10 @@ const API_TAG_RE = /<(Api[A-Za-z]+)\b[^>]*\/>/g;
  * corresponding section from `doc`. Pages that don't have a JSON peer (or
  * use no `<Api*>` tags) are returned unchanged.
  */
-export async function expandApiTags(slug: string, text: string): Promise<string> {
+export async function expandApiTags(
+  slug: string,
+  text: string,
+): Promise<string> {
   if (!API_TAG_RE.test(text)) return text;
   // Reset lastIndex after the test() above.
   API_TAG_RE.lastIndex = 0;
@@ -110,7 +113,7 @@ export async function expandApiTags(slug: string, text: string): Promise<string>
 
   return text.replace(API_TAG_RE, (_match, name: string) => {
     const renderer = RENDERERS[name];
-    return renderer ? renderer(doc) : '';
+    return renderer ? renderer(doc) : "";
   });
 }
 
@@ -126,90 +129,89 @@ const RENDERERS: Record<string, (doc: ClassDoc) => string> = {
 };
 
 function renderInit(doc: ClassDoc): string {
-  if (doc.hideInitialization || !doc.initializer) return '';
+  if (doc.hideInitialization || !doc.initializer) return "";
   const lines: string[] = [];
-  lines.push('```ts', doc.initializer.signature, '```');
+  lines.push("```ts", doc.initializer.signature, "```");
   if (doc.constructorOptions?.length) {
     if (doc.initializer.optionsTypeName) {
-      lines.push('', `**\`${doc.initializer.optionsTypeName}\`**`);
+      lines.push("", `**\`${doc.initializer.optionsTypeName}\`**`);
     }
-    lines.push('');
-    lines.push('| Field | Type | Default | Description |');
-    lines.push('|---|---|---|---|');
+    lines.push("");
+    lines.push("| Field | Type | Default | Description |");
+    lines.push("|---|---|---|---|");
     for (const f of doc.constructorOptions) {
-      const name = `\`${f.name}${f.optional ? '?' : ''}\``;
-      const type = f.type ? `\`${oneLine(f.type)}\`` : '—';
-      const def = f.default ? `\`${f.default}\`` : '—';
-      const desc = oneLine(f.description ?? '');
+      const name = `\`${f.name}${f.optional ? "?" : ""}\``;
+      const type = f.type ? `\`${oneLine(f.type)}\`` : "—";
+      const def = f.default ? `\`${f.default}\`` : "—";
+      const desc = oneLine(f.description ?? "");
       lines.push(`| ${name} | ${type} | ${def} | ${escapePipes(desc)} |`);
     }
   }
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 function renderFieldRows(fields?: Field[]): string {
-  if (!fields?.length) return '';
+  if (!fields?.length) return "";
   const lines: string[] = [];
-  lines.push('| Name | Type | Description |');
-  lines.push('|---|---|---|');
+  lines.push("| Name | Type | Description |");
+  lines.push("|---|---|---|");
   for (const f of fields) {
-    const tagPrefix =
-      f.tags?.length ? f.tags.map((t) => `\`@${t}\``).join(' ') + ' ' : '';
-    const name = `\`${f.name}${f.optional ? '?' : ''}\``;
-    const type = f.type ? `\`${oneLine(f.type)}\`` : '—';
-    const desc = tagPrefix + oneLine(f.description ?? '');
+    const tagPrefix = f.tags?.length
+      ? f.tags.map((t) => `\`@${t}\``).join(" ") + " "
+      : "";
+    const name = `\`${f.name}${f.optional ? "?" : ""}\``;
+    const type = f.type ? `\`${oneLine(f.type)}\`` : "—";
+    const desc = tagPrefix + oneLine(f.description ?? "");
     lines.push(`| ${name} | ${type} | ${escapePipes(desc)} |`);
   }
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 function renderMethodRows(methods?: Method[]): string {
-  if (!methods?.length) return '';
+  if (!methods?.length) return "";
   const lines: string[] = [];
-  lines.push('| Name | Type | Description |');
-  lines.push('|---|---|---|');
+  lines.push("| Name | Type | Description |");
+  lines.push("|---|---|---|");
   for (const m of methods) {
-    const tagPrefix =
-      m.tags?.length ? m.tags.map((t) => `\`@${t}\``).join(' ') + ' ' : '';
+    const tagPrefix = m.tags?.length
+      ? m.tags.map((t) => `\`@${t}\``).join(" ") + " "
+      : "";
     const name = `\`${m.name}\``;
     const sig = m.signature ?? buildSignature(m);
-    const type = sig ? `\`${oneLine(sig)}\`` : '—';
-    const desc = tagPrefix + oneLine(m.description ?? '');
+    const type = sig ? `\`${oneLine(sig)}\`` : "—";
+    const desc = tagPrefix + oneLine(m.description ?? "");
     lines.push(`| ${name} | ${type} | ${escapePipes(desc)} |`);
   }
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 function renderEvents(doc: ClassDoc): string {
   const e = doc.events;
-  if (!e) return '';
+  if (!e) return "";
   const lines: string[] = [];
 
   if (e.emitterMethods?.length) {
-    lines.push('**Emitter methods**', '');
+    lines.push("**Emitter methods**", "");
     lines.push(renderMethodRows(e.emitterMethods));
   }
 
   if (e.entries?.length) {
-    if (lines.length) lines.push('');
-    lines.push('**Events**', '');
-    lines.push('| Event | String key | Args | Description |');
-    lines.push('|---|---|---|---|');
+    if (lines.length) lines.push("");
+    lines.push("**Events**", "");
+    lines.push("| Event | String key | Args | Description |");
+    lines.push("|---|---|---|---|");
     for (const entry of e.entries) {
       const name = entry.key ? `\`${entry.key}\`` : `\`${entry.name}\``;
-      const value = entry.value ? `\`"${entry.value}"\`` : '—';
-      const args =
-        entry.args?.length
-          ? entry.args
-              .map((a) => `\`${a.name}: ${oneLine(a.type)}\``)
-              .join(', ')
-          : '—';
-      const desc = oneLine(entry.description ?? '');
+      const value = entry.value ? `\`"${entry.value}"\`` : "—";
+      const args = entry.args?.length
+        ? entry.args.map((a) => `\`${a.name}: ${oneLine(a.type)}\``).join(", ")
+        : "—";
+      const desc = oneLine(entry.description ?? "");
       lines.push(`| ${name} | ${value} | ${args} | ${escapePipes(desc)} |`);
     }
   }
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 // ─── utils ──────────────────────────────────────────────────────────────────
@@ -217,15 +219,15 @@ function renderEvents(doc: ClassDoc): string {
 function buildSignature(m: Method): string {
   const params = (m.params ?? [])
     .map((p) => `${p.name}: ${oneLine(p.type)}`)
-    .join(', ');
-  return `(${params}) => ${m.returns ?? 'void'}`;
+    .join(", ");
+  return `(${params}) => ${m.returns ?? "void"}`;
 }
 
 function oneLine(s: string): string {
-  return s.replace(/\s+/g, ' ').trim();
+  return s.replace(/\s+/g, " ").trim();
 }
 
 /** Pipes break GitHub markdown tables; escape them in cell content. */
 function escapePipes(s: string): string {
-  return s.replace(/\|/g, '\\|');
+  return s.replace(/\|/g, "\\|");
 }

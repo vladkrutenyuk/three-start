@@ -402,12 +402,15 @@ function buildTerrain(): THREE.LineSegments {
 function buildPathCurve(): THREE.CatmullRomCurve3 {
   const pts: THREE.Vector3[] = [];
   const turns = -1.55;
-  const aStart = Math.PI * 0.55;
+  // start dead-center in front of the hero camera
+  const aStart = Math.PI * 0.5;
   const n = 46;
   for (let i = 0; i <= n; i++) {
     const t = i / n;
     const a = aStart + t * turns * Math.PI * 2;
-    const r = 60 * (1 - t) ** 1.12;
+    // r0 = 44 keeps the resting traveler centered and visible under the
+    // hero copy (further out it drops below the hero camera's frame)
+    const r = 44 * (1 - t) ** 1.12;
     const x = Math.cos(a) * r;
     const z = Math.sin(a) * r;
     pts.push(new THREE.Vector3(x, heightAt(x, z) + 0.45, z));
@@ -539,7 +542,7 @@ export function createLandingScene(container: HTMLDivElement): LandingSceneApi {
   const startP = curve.getPointAt(0.06);
   const camPos = new THREE.CatmullRomCurve3(
     [
-      new THREE.Vector3(0, 3, 88),
+      new THREE.Vector3(0, 8, 90),
       new THREE.Vector3(startP.x + 16, startP.y + 8, startP.z + 30),
       new THREE.Vector3(46, summitY + 15, 42),
       new THREE.Vector3(beaconPos.x + 12, beaconPos.y + 6, beaconPos.z + 16),
@@ -553,7 +556,9 @@ export function createLandingScene(container: HTMLDivElement): LandingSceneApi {
   );
   const camLook = new THREE.CatmullRomCurve3(
     [
-      new THREE.Vector3(0, summitY * 0.72, 0),
+      // aim above the summit so the ridge sits in the lower half of the frame,
+      // clear of the hero copy
+      new THREE.Vector3(0, summitY * 1.25, 0),
       new THREE.Vector3(startP.x, startP.y + 2, startP.z),
       new THREE.Vector3(0, summitY + 3, 0),
       new THREE.Vector3(beaconPos.x, beaconPos.y + 1.5, beaconPos.z),
@@ -692,6 +697,10 @@ export function createLandingScene(container: HTMLDivElement): LandingSceneApi {
     if (index === 3) setBeaconEnabled(!(t > 0.55 && t < 0.85));
     if (index === 5) setFrozen(t > 0.28 && t < 0.78);
   }
+
+  // the satellites fly from the very first frame — the hero feels alive
+  // before the story even begins (ch. 02 then narrates how they got there)
+  ensureSatellites();
 
   starter.mount(container);
   starter.start();
