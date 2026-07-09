@@ -1,6 +1,6 @@
 {
   "name": "three-start",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Minimal foundation layer for Three.js: bootstrap, lifecycle, and a unified component model. A thin layer around Three.js, not a replacement for it.",
   "keywords": [
     "three",
@@ -80,6 +80,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.11",
+    "@fontsource/instrument-serif": "^5.2.8",
     "@orama/orama": "^3.1.18",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/react-router": "1.168.18",
@@ -92,6 +93,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/three": "0.183.1",
     "@vitejs/plugin-react": "^6.0.1",
+    "animejs": "^4.5.0",
     "camera-controls": "^3.1.2",
     "eventemitter3": "5.0.4",
     "fumadocs-core": "16.7.14",
@@ -111,9 +113,5 @@
     "typescript": "^6.0.2",
     "vite": "^8.0.8",
     "wrangler": "^4.85.0"
-  },
-  "dependencies": {
-    "@fontsource/instrument-serif": "^5.2.8",
-    "animejs": "^4.5.0"
   }
 }
