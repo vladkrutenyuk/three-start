@@ -1,0 +1,47 @@
+---
+title: React
+description: Using three-start in a React app — no wrapper needed, just mount into a ref.
+---
+
+three-start doesn't need a React wrapper or special bindings. [`ThreeStart`](/docs/api/three-start) mounts into a plain DOM element via `mount()` / `unmount()` — so in React you integrate it the same way as any third-party DOM library: a `ref` for the container, and a `useEffect` that mounts on setup and unmounts on cleanup.
+
+## Mount with a ref
+
+```tsx title="ThreeView.tsx"
+import { useEffect, useRef } from "react";
+import type { ThreeStart } from "three-start";
+
+export function ThreeView({ starter }: { starter: ThreeStart }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    starter.mount(element);         // [!code highlight]
+    return () => starter.unmount(); // [!code highlight]
+  }, [starter]);
+
+  return <div ref={ref} style={{ width: "100%", height: "100%" }} />;
+}
+```
+
+<Callout type="info">
+  `mount()` is idempotent and `unmount()` fully reverses it, so the mount/unmount cycles React runs in `<StrictMode>` dev builds are safe.
+</Callout>
+
+<Callout type="warn">
+  The container `<div>` must have real dimensions — the canvas sizes itself to the container (and keeps tracking it via a resize observer). A zero-height div renders a zero-height canvas.
+</Callout>
+
+## Ready-made component
+
+If you'd rather not write even that, the library ships the exact same pattern as a component — `ThreeRendererMount` from the `three-start/react` entry:
+
+```tsx
+import { ThreeRendererMount } from "three-start/react";
+
+<ThreeRendererMount ctx={starter} style={{ width: "100%", height: "100%" }} />;
+```
+
+`ctx` accepts a [`ThreeStart`](/docs/api/three-start) or a [`ThreeContext`](/docs/api/three-context); every other prop (`className`, `style`, …) is forwarded to the underlying `<div>`.

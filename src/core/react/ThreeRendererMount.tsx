@@ -1,11 +1,11 @@
 import { useEffect, useRef } from "react";
 import type { ComponentProps, FC } from "react";
 import { ThreeContext } from "../ThreeContext";
+import { ThreeStart } from "../ThreeStart";
 
-export const ThreeRendererMount: FC<ComponentProps<"div"> & { ctx: ThreeContext }> = ({
-	ctx,
-	...props
-}) => {
+export const ThreeRendererMount: FC<
+	ComponentProps<"div"> & { ctx: ThreeContext | ThreeStart }
+> = ({ ctx, ...props }) => {
 	const ref = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
@@ -14,9 +14,7 @@ export const ThreeRendererMount: FC<ComponentProps<"div"> & { ctx: ThreeContext 
 
 		ctx.mount(element);
 
-		return () => {
-			ctx.unmount();
-		};
+		return () => ctx.unmount();
 	}, [ctx]);
 
 	return <div ref={ref} {...props} />;
