@@ -141,7 +141,10 @@ export class ThreeContext extends TypedEmitter<ThreeContextEventMap> {
 
 		this._canvasContainer = container;
 		container.append(canvas);
+		// Focusable so the canvas can receive keyboard events, and never ringed:
+		// the focus outline would frame the whole scene once focus returns to it.
 		canvas.tabIndex = 0;
+		canvas.style.outline = "none";
 		canvas.style.touchAction = "none";
 
 		this.emit(ThreeContextEvents.Mount, container);
