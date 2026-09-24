@@ -7,7 +7,20 @@
       "name": "camera",
       "type": "THREE.PerspectiveCamera",
       "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">THREE</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">.PerspectiveCamera</span>",
-      "description": "The active camera. Reassigning it swaps the camera used by the scene pass and fires `CameraChanged`."
+      "description": "The active camera, typed as perspective for the common case. Reassigning it swaps the\ncamera used by the scene pass and fires `CameraChanged`. If an orthographic camera is\nactive, this returns it too: check `isOrtho` and use `ortho` in orthographic scenes."
+    },
+    {
+      "name": "ortho",
+      "type": "THREE.OrthographicCamera",
+      "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">THREE</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">.OrthographicCamera</span>",
+      "description": "The active camera typed as orthographic — `camera` for orthographic scenes. Same camera, same setter semantics."
+    },
+    {
+      "name": "isOrtho",
+      "type": "boolean",
+      "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">boolean</span>",
+      "readonly": true,
+      "description": "`true` when the active camera is orthographic — then read it through `ortho`, otherwise through `camera`."
     },
     {
       "name": "canvasContainer",

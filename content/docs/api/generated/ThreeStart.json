@@ -16,10 +16,10 @@
     },
     {
       "name": "camera",
-      "type": "THREE.PerspectiveCamera",
-      "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">THREE</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">.PerspectiveCamera</span>",
+      "type": "ThreeStartCamera",
+      "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">ThreeStartCamera</span>",
       "optional": true,
-      "description": "Override the default `PerspectiveCamera`. If not provided, one is created automatically and added to the scene."
+      "description": "Override the default `PerspectiveCamera` (an `OrthographicCamera` works too). If not provided, one is created automatically and added to the scene."
     },
     {
       "name": "scene",
