@@ -23,7 +23,9 @@ starter.start();
 | Field / method | Purpose |
 |---|---|
 | `ctx.scene` | The root `THREE.Scene`. Add objects directly. |
-| `ctx.camera` | The active `PerspectiveCamera`. Reassigning swaps the camera the render pipeline draws — fires `CameraChanged`. |
+| `ctx.camera` | The active camera, typed as `PerspectiveCamera`. Reassigning swaps the camera the render pipeline draws — fires `CameraChanged`. |
+| `ctx.ortho` | The same active camera, typed as `OrthographicCamera`. Assign an orthographic camera through it. |
+| `ctx.isOrtho` | `true` when the active camera is orthographic. |
 | `ctx.renderer` | The `THREE.Renderer` (default: `WebGPURenderer` with antialiasing). |
 | `ctx.renderPipeline` | The `RenderPipeline` driving the default render call. |
 | `ctx.scenePass` | The `PassNode` for the current scene/camera. Attach post-processing via TSL. |
@@ -110,7 +112,7 @@ Common events:
 | `Resized` | `width, height` | First mount and every container resize. |
 | `Mount` / `Unmount` | container / none | Canvas attached / detached. |
 | `LoopRun` / `LoopStop` | none | Animation loop started / stopped. |
-| `CameraChanged` | `newCamera, prevCamera` | `ctx.camera = ...` was called. |
+| `CameraChanged` | `newCamera, prevCamera` | `ctx.camera` or `ctx.ortho` was assigned. |
 
 Full list with payload tuples is in the [API reference](/docs/api/three-context#events).
 
@@ -140,6 +142,25 @@ ctx.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHei
 ```
 
 Re-assignment updates the scene pass, attaches the new camera to the scene if it has no parent, recomputes the aspect from the current container, and fires `CameraChanged`. Subscribe to that event from anywhere holding a stale camera reference.
+
+### Orthographic cameras
+
+```ts
+ctx.ortho = new THREE.OrthographicCamera(-5, 5, 5, -5, 0.1, 100);
+ctx.ortho.zoom = 2;
+ctx.ortho.updateProjectionMatrix();
+```
+
+There is one active camera; `camera` and `ortho` are two typed views of it, and both setters do the same thing. `ctx.camera` stays typed as `PerspectiveCamera` because that's the common case: no null checks or type guards on every access. The price is honesty — in an orthographic scene `ctx.camera` returns the orthographic camera. Code that must work with both kinds branches on `ctx.isOrtho`:
+
+```ts
+if (ctx.isOrtho) ctx.ortho.zoom = 2;
+else ctx.camera.fov = 60;
+```
+
+`CameraChanged` listeners are typed the same way as `ctx.camera`.
+
+On every resize an orthographic camera keeps its vertical extent (`top`/`bottom`) and horizontal center, and `left`/`right` are recomputed from the container's aspect so the image isn't stretched. A perspective camera gets its `aspect`.
 
 <Cards>
   <Card title="ThreeContext API" href="/docs/api/three-context" />

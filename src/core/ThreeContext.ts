@@ -34,14 +34,29 @@ export class ThreeContext extends TypedEmitter<ThreeContextEventMap> {
 	/** @internal Backing store for `modules`. `_registerModule` is the only way to add to it. */
 	private readonly _modules: Record<string, ContextModule> = {};
 
-	/** The active camera. Reassigning it swaps the camera used by the scene pass and fires `CameraChanged`. */
-	public get camera() {
-		return this._camera;
+	/**
+	 * The active camera, typed as perspective for the common case. Reassigning it swaps the
+	 * camera used by the scene pass and fires `CameraChanged`. If an orthographic camera is
+	 * active, this returns it too: check `isOrtho` and use `ortho` in orthographic scenes.
+	 */
+	public get camera(): THREE.PerspectiveCamera {
+		return this._camera as THREE.PerspectiveCamera;
 	}
 	public set camera(value: THREE.PerspectiveCamera) {
-		const prevCamera = this._camera;
-		this._camera = value;
-		this.cameraChanged(value, prevCamera);
+		this.setCamera(value);
+	}
+
+	/** The active camera typed as orthographic — `camera` for orthographic scenes. Same camera, same setter semantics. */
+	public get ortho(): THREE.OrthographicCamera {
+		return this._camera as THREE.OrthographicCamera;
+	}
+	public set ortho(value: THREE.OrthographicCamera) {
+		this.setCamera(value);
+	}
+
+	/** `true` when the active camera is orthographic — then read it through `ortho`, otherwise through `camera`. */
+	public get isOrtho(): boolean {
+		return !!(this._camera as THREE.OrthographicCamera).isOrthographicCamera;
 	}
 
 	/** The HTML element the renderer canvas is currently mounted into, or `null` if not mounted. */
@@ -68,7 +83,7 @@ export class ThreeContext extends TypedEmitter<ThreeContextEventMap> {
 	_isBootstrapping = false;
 
 	private readonly _timer: THREE.Timer;
-	private _camera: THREE.PerspectiveCamera;
+	private _camera: ThreeStartCamera;
 	private _canvasContainer: HTMLDivElement | null = null;
 	private _resizeObserver: ResizeObserver | null = null;
 	private _isMounted = false;
@@ -249,20 +264,16 @@ export class ThreeContext extends TypedEmitter<ThreeContextEventMap> {
 		const width = container.offsetWidth;
 		const height = container.offsetHeight;
 
-		const camera = this._camera;
-
-		camera.aspect = width / height;
-		camera.updateProjectionMatrix();
+		fitCameraToAspect(this._camera, width / height);
 
 		this.renderer.setSize(width, height);
 		this.emit(ThreeContextEvents.Resized, width, height);
 		this.render();
 	};
 
-	private cameraChanged(
-		newCamera: THREE.PerspectiveCamera,
-		prevCamera: THREE.PerspectiveCamera
-	) {
+	private setCamera(newCamera: ThreeStartCamera) {
+		const prevCamera = this._camera;
+		this._camera = newCamera;
 		// Rebind the scene pass to the new camera so the render pipeline picks it up.
 		this.scenePass.camera = newCamera;
 		// Attach to the scene if the camera is floating (matches constructor behaviour).
@@ -270,13 +281,39 @@ export class ThreeContext extends TypedEmitter<ThreeContextEventMap> {
 
 		const root = this._canvasContainer;
 		if (root) {
-			newCamera.aspect = root.offsetWidth / root.offsetHeight;
+			fitCameraToAspect(newCamera, root.offsetWidth / root.offsetHeight);
+		} else {
+			newCamera.updateProjectionMatrix();
 		}
-		newCamera.updateProjectionMatrix();
 
-		this.emit(ThreeContextEvents.CameraChanged, newCamera, prevCamera);
+		// Typed as perspective for the listeners' convenience, like `ctx.camera`.
+		this.emit(
+			ThreeContextEvents.CameraChanged,
+			newCamera as THREE.PerspectiveCamera,
+			prevCamera as THREE.PerspectiveCamera
+		);
 		this.render();
 	}
+}
+
+/** A camera `ThreeContext` can render with. */
+export type ThreeStartCamera = THREE.PerspectiveCamera | THREE.OrthographicCamera;
+
+/**
+ * Perspective: sets `aspect`. Orthographic: keeps the vertical extent and the center,
+ * widens or narrows `left`/`right` to the aspect so the image isn't stretched.
+ */
+function fitCameraToAspect(camera: ThreeStartCamera, aspect: number) {
+	if ((camera as THREE.OrthographicCamera).isOrthographicCamera) {
+		const ortho = camera as THREE.OrthographicCamera;
+		const halfWidth = ((ortho.top - ortho.bottom) / 2) * aspect;
+		const centerX = (ortho.left + ortho.right) / 2;
+		ortho.left = centerX - halfWidth;
+		ortho.right = centerX + halfWidth;
+	} else {
+		(camera as THREE.PerspectiveCamera).aspect = aspect;
+	}
+	camera.updateProjectionMatrix();
 }
 
 export enum ThreeContextEvents {

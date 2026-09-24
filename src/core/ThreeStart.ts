@@ -1,13 +1,13 @@
 import type * as THREE from "three/webgpu";
 import { ContextModule, type ThreeStartModules } from "./ContextModule";
 import { attachContext, getExtension, traverseActiveSelf } from "./Object3DExtension";
-import { ThreeContext } from "./ThreeContext";
+import { ThreeContext, type ThreeStartCamera } from "./ThreeContext";
 
 export interface ThreeStartOptions {
 	/** The Three.js renderer to use. Defaults to a `WebGPURenderer` with antialiasing. */
 	renderer?: THREE.Renderer;
-	/** Override the default `PerspectiveCamera`. If not provided, one is created automatically and added to the scene. */
-	camera?: THREE.PerspectiveCamera;
+	/** Override the default `PerspectiveCamera` (an `OrthographicCamera` works too). If not provided, one is created automatically and added to the scene. */
+	camera?: ThreeStartCamera;
 	/** Override the default `Scene`. If not provided, an empty scene is created. */
 	scene?: THREE.Scene;
 	/**

@@ -373,11 +373,11 @@ This split exists to enforce a clean access boundary: third-party components/mod
 
 ## Camera swap mechanics
 
-Setting `ctx.camera = newCamera` triggers `cameraChanged(new, prev)` (private), which:
+Setting `ctx.camera` or `ctx.ortho` calls one private `setCamera(camera)`. Both accessors read and write the same `_camera: PerspectiveCamera | OrthographicCamera` and only cast it to their type; `ctx.isOrtho` tells which kind is actually active. `setCamera`:
 
 1. Reassigns `this.scenePass.camera = newCamera` — the render pipeline reads `scenePass.camera` per frame, so this is what actually swaps the rendered viewpoint.
 2. If `newCamera.parent === null`, calls `this.scene.add(newCamera)` — matches the constructor behaviour for a floating default camera.
-3. Updates `aspect` from current container dimensions and calls `updateProjectionMatrix()`.
+3. Fits the camera to the container's aspect (`fitCameraToAspect`: perspective → `aspect`; orthographic → `left`/`right` around the horizontal center, keeping `top`/`bottom`) and calls `updateProjectionMatrix()`. The resize handler uses the same function.
 4. Emits `CameraChanged` with `[newCamera, prevCamera]`.
 5. Calls `render()` to redraw immediately.
 
