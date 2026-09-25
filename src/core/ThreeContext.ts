@@ -201,9 +201,17 @@ export class ThreeContext extends TypedEmitter<ThreeContextEventMap> {
 		this._isLoopRunning = true;
 
 		this._timer.connect(document);
+		// Reset on start, not on stop: the first tick then measures from this call,
+		// so time spent with the loop stopped never lands in `getDeltaTime()`.
+		this._timer.reset();
+		let isFirstTick = true;
 
 		this.renderer.setAnimationLoop((timestamp) => {
-			this._timer.update(timestamp);
+			// `reset()` reads `performance.now()`, while a rAF timestamp is the frame's
+			// vsync and may predate this call — the first tick uses the same clock so
+			// its delta can't go negative.
+			this._timer.update(isFirstTick ? undefined : timestamp);
+			isFirstTick = false;
 			this.emit(ThreeContextEvents.Update);
 			this.render();
 		});
@@ -219,7 +227,6 @@ export class ThreeContext extends TypedEmitter<ThreeContextEventMap> {
 		this._isLoopRunning = false;
 
 		this._timer.disconnect();
-		this._timer.reset();
 
 		this.renderer.setAnimationLoop(null);
 		this.emit(ThreeContextEvents.LoopStop);

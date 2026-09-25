@@ -56,8 +56,8 @@ A component whose object is not yet in a hierarchy with an attached context has 
 - `_isBootstrapping: boolean` — `true` only during `ThreeStart.start()` Phase 0 (module bootstrap). Read by `Object3DExtension.addComponent` to decide whether to defer activation. `@internal`, stripped from `.d.ts` output.
 - `_modules: Record<string, ContextModule>` — the actual mutable backing store for registered modules. Only `_registerModule(key, instance)` writes to it.
 - `_renderFn / _srcRenderFn` — the current render function and the original. `overrideRender(fn)` swaps `_renderFn`; `resetRender()` restores from `_srcRenderFn`.
-- `_timer: THREE.Timer` — drives `getDeltaTime` / `getTime` / `getTimescale` / `setTimescale`. Connected to `document` on `runLoop`, disconnected/reset on `stopLoop`.
-- `_camera`, `_canvasContainer`, `_resizeObserver`, `_isMounted`, `_isLoopRunning`, `_requestAnimationFrame` — backing state for the corresponding getters / lifecycle methods.
+- `_timer: THREE.Timer` — drives `getDeltaTime` / `getTime` / `getTimescale` / `setTimescale`. Connected to `document` and reset on `runLoop`, disconnected on `stopLoop`. Resetting on start keeps a stopped period out of the first `getDeltaTime()`; that first tick reads `performance.now()` instead of the rAF timestamp, which may predate the reset.
+- `_camera`, `_canvasContainer`, `_resizeObserver`, `_isMounted`, `_isLoopRunning` — backing state for the corresponding getters / lifecycle methods.
 
 ## Sealed runtime fields
 
@@ -365,7 +365,7 @@ The core has two latent type-level cycles, both kept harmless by `import type`:
 |---|---|---|
 | `mount(container)` | `ctx.mount(container)` | Append canvas, attach resize observer, optionally start loop. |
 | `unmount()` | `ctx.unmount()` | Remove canvas, disconnect observer, optionally stop loop. |
-| `runLoop()` | `ctx.runLoop()` | Connect timer to `document`, call `renderer.setAnimationLoop(...)`, emit `LoopRun`. |
+| `runLoop()` | `ctx.runLoop()` | Connect timer to `document` and reset it, call `renderer.setAnimationLoop(...)`, emit `LoopRun`. |
 | `stopLoop()` | `ctx.stopLoop()` | Disconnect timer, set animation loop `null`, emit `LoopStop`. |
 | `dispose()` | `ctx.dispose()` | Tear down: unmount, stopLoop, dispose renderer + timer, removeAllListeners. |
 

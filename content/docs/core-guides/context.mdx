@@ -89,6 +89,8 @@ You can call them in any order. `mount` without `start` gives you a black canvas
 
 `runLoop()` / `stopLoop()` start and stop the animation loop independently of mount.
 
+Time doesn't run while the loop is stopped: the first tick after `runLoop()` measures `getDeltaTime()` from the `runLoop()` call, not from the last tick before `stopLoop()`. Stopping the loop on idle and restarting it on demand never feeds a component one huge delta.
+
 ## Events
 
 `ThreeContext` extends [`TypedEmitter`](/docs/api/typed-emitter) and is the central event bus of the runtime. Subscribe via `ctx.on(EventName, listener)`; the event names live on `ThreeContextEvents`:
