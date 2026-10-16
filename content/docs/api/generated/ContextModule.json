@@ -17,6 +17,13 @@
       "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">ThreeStartModules</span>",
       "readonly": true,
       "description": "Shortcut to sibling [`ContextModule`](/docs/api/context-module) instances: `this.modules.myModule`."
+    },
+    {
+      "name": "scenes",
+      "type": "ThreeStartScenes",
+      "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">ThreeStartScenes</span>",
+      "readonly": true,
+      "description": "Shortcut to named scenes: `this.scenes.Menu`. Same object as `this.ctx.scenes`."
     }
   ],
   "events": {

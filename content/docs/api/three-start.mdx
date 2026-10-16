@@ -5,7 +5,7 @@ description: The entry point. Bootstraps the scene, registers modules, and wires
 
 import doc from './generated/ThreeStart.json'
 
-`ThreeStart` is the entry point of every three-start project. It creates a [`ThreeContext`](/docs/api/three-context), accepts [`ContextModule`](/docs/api/context-module) instances, and bootstraps the entire scene in a defined order when `start()` is called.
+`ThreeStart` is the entry point of every three-start project. It creates a [`ThreeContext`](/docs/api/three-context), accepts [`ContextModule`](/docs/api/context-module) instances, and bootstraps the active scene in a defined order when `start()` is called. Extra scenes are registered with [`addScene`](/docs/api/operations) / [`setScene`](/docs/api/operations) and read from `starter.scenes` — see [Scenes](/docs/core-guides/scenes).
 
 ```ts
 import { ThreeStart } from "three-start";

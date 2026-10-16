@@ -1,6 +1,6 @@
 {
   "name": "ThreeStart",
-  "description": "Entry point of every three-start project. Owns a single [`ThreeContext`](/docs/api/three-context),\nregisters modules, controls lifecycle (mount / loop / dispose), and bootstraps the scene on `start()`.",
+  "description": "Entry point of every three-start project. Owns a single [`ThreeContext`](/docs/api/three-context),\nregisters modules, controls lifecycle (mount / loop / dispose), and bootstraps\nthe active scene on `start()`. Extra scenes: [`addScene`](/docs/api/operations) /\n[`setScene`](/docs/api/operations).",
   "initializer": {
     "signature": "new ThreeStart(options?: ThreeStartOptions)",
     "signatureHtml": "<span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">new</span><span style=\"--shiki-light:#6F42C1;--shiki-dark:#B392F0\"> ThreeStart</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">(options</span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">?:</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\"> ThreeStartOptions)</span>",
@@ -26,7 +26,7 @@
       "type": "THREE.Scene",
       "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">THREE</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">.Scene</span>",
       "optional": true,
-      "description": "Override the default `Scene`. If not provided, an empty scene is created."
+      "description": "Override the default `Scene`. If not provided, an empty scene is created. Registered as `scenes.Default`."
     },
     {
       "name": "manageLoopManually",
@@ -63,6 +63,13 @@
   ],
   "properties": [
     {
+      "name": "scenes",
+      "type": "ThreeStartScenes",
+      "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">ThreeStartScenes</span>",
+      "readonly": true,
+      "description": "Registered scenes by name. `Default` is the constructor scene. Read-only at\nruntime — mutations throw. Populate via [`addScene`](/docs/api/operations).\nSame object as `ctx.scenes`."
+    },
+    {
       "name": "isStarted",
       "type": "boolean",
       "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">boolean</span>",
@@ -86,7 +93,7 @@
       "signature": "() => this",
       "signatureHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">() </span><span style=\"--shiki-light:#D73A49;--shiki-dark:#F97583\">=></span><span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\"> this</span>",
       "tags": [],
-      "description": "Bootstrap the scene: awaken registered [`ContextModule`](/docs/api/context-module)s, attach\nthe context to the scene graph, and activate [`Object3DBehaviour`](/docs/api/object3d-behaviour)\ninstances on every existing object. After `start()`, any objects added to the scene get\nbootstrapped automatically.\n\nNo more modules can be registered after this call."
+      "description": "Bootstrap the active scene: awaken registered [`ContextModule`](/docs/api/context-module)s, attach\nthe context to the scene graph, and activate [`Object3DBehaviour`](/docs/api/object3d-behaviour)\ninstances on every existing object. After `start()`, any objects added to the active scene get\nbootstrapped automatically. Other registered scenes wait until the first [`setScene`](/docs/api/operations)\nthat shows them.\n\nNo more modules can be registered after this call."
     },
     {
       "name": "addModules",

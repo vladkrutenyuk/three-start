@@ -3,7 +3,7 @@ title: Context
 description: What's on the context and how to use it from components, modules, or top-level code.
 ---
 
-[`ThreeContext`](/docs/api/three-context) is the single runtime object every scene gets. It bundles the renderer, scene, camera, animation loop, timer, render pipeline, and event bus into one place. Every [`ContextModule`](/docs/api/context-module) and [`Object3DBehaviour`](/docs/api/object3d-behaviour) sees the same instance.
+[`ThreeContext`](/docs/api/three-context) is the single runtime object every [`ThreeStart`](/docs/api/three-start) instance gets. It bundles the renderer, the **active** scene, named `scenes` map, camera, animation loop, timer, render pipeline, and event bus into one place. Every [`ContextModule`](/docs/api/context-module) and [`Object3DBehaviour`](/docs/api/object3d-behaviour) sees the same instance. Extra scenes: [Scenes](/docs/core-guides/scenes).
 
 You don't construct `ThreeContext` directly. [`ThreeStart`](/docs/api/three-start) creates one in its constructor and exposes it as `starter.ctx`. From any component or module, the same instance is `this.ctx`.
 
@@ -22,13 +22,14 @@ starter.start();
 
 | Field / method | Purpose |
 |---|---|
-| `ctx.scene` | The root `THREE.Scene`. Add objects directly. |
-| `ctx.camera` | The active camera, typed as `PerspectiveCamera`. Reassigning swaps the camera the render pipeline draws — fires `CameraChanged`. |
+| `ctx.scene` | The active `THREE.Scene`. Add objects directly. Reassigning throws — switch with [`setScene`](/docs/api/operations). |
+| `ctx.scenes` | Named map of registered scenes (`Default` is the constructor scene). Same object as `starter.scenes`. |
+| `ctx.camera` | The active camera, typed as `PerspectiveCamera`. Reassigning swaps the camera the **current** scene draws — fires `CameraChanged`. |
 | `ctx.ortho` | The same active camera, typed as `OrthographicCamera`. Assign an orthographic camera through it. |
 | `ctx.isOrtho` | `true` when the active camera is orthographic. |
 | `ctx.renderer` | The `THREE.Renderer` (default: `WebGPURenderer` with antialiasing). |
 | `ctx.renderPipeline` | The `RenderPipeline` driving the default render call. |
-| `ctx.scenePass` | The `PassNode` for the current scene/camera. Attach post-processing via TSL. |
+| `ctx.scenePass` | The `PassNode` for the active scene/camera. Attach post-processing via TSL; it follows `setScene`. |
 | `ctx.modules` | Registered [`ContextModule`](/docs/api/context-module) instances, keyed by name. Read-only at runtime. |
 | `ctx.getDeltaTime()` / `ctx.getTime()` / `ctx.getTimescale()` | Frame-time accessors. Time scaling applies to both. |
 | `ctx.setTimescale(n)` | Set time scale — `1` = realtime, `0` = freeze, `2` = 2× speed. |
@@ -146,7 +147,8 @@ Common events:
 | `Resized` | `width, height` | First mount and every container resize. |
 | `Mount` / `Unmount` | container / none | Canvas attached / detached. |
 | `LoopRun` / `LoopStop` | none | Animation loop started / stopped. |
-| `CameraChanged` | `newCamera, prevCamera` | `ctx.camera` or `ctx.ortho` was assigned. |
+| `CameraChanged` | `newCamera, prevCamera` | `ctx.camera` or `ctx.ortho` was assigned, or `setScene` restored a scene's camera. |
+| `SceneChanged` | `newScene, prevScene` | `setScene(ctx, name)` switched the active scene. Fires after `CameraChanged`. |
 | `Error` | `error, source, hook` | A component or module event method, or a ctx listener, threw. See [Errors in event methods](/docs/core-guides/lifecycle#errors-in-event-methods). |
 
 Full list with payload tuples is in the [API reference](/docs/api/three-context#events).
@@ -178,7 +180,7 @@ Call `ctx.render()` directly for editor-style UIs that don't want a continuous l
 ctx.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight);
 ```
 
-Re-assignment updates the scene pass, attaches the new camera to the scene if it has no parent, recomputes the aspect from the current container, and fires `CameraChanged`. Subscribe to that event from anywhere holding a stale camera reference.
+Re-assignment updates the scene pass, attaches the new camera to the **active** scene if it has no parent, recomputes the aspect from the current container, and fires `CameraChanged`. Subscribe to that event from anywhere holding a stale camera reference. Each registered scene remembers its own camera; see [Scenes](/docs/core-guides/scenes).
 
 ### Orthographic cameras
 
@@ -202,6 +204,7 @@ On every resize an orthographic camera keeps its vertical extent (`top`/`bottom`
 <Cards>
   <Card title="ThreeContext API" href="/docs/api/three-context" />
   <Card title="ThreeStart API" href="/docs/api/three-start" />
+  <Card title="Scenes" href="/docs/core-guides/scenes" />
   <Card title="Lifecycle" href="/docs/core-guides/lifecycle" />
   <Card title="TypedEmitter" href="/docs/api/typed-emitter" />
 </Cards>

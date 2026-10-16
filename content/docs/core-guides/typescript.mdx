@@ -1,9 +1,9 @@
 ---
 title: TypeScript
-description: Module registry augmentation, typed events, typed component access, and other patterns for getting full type safety out of three-start.
+description: Module and scene registry augmentation, typed events, typed component access, and other patterns for getting full type safety out of three-start.
 ---
 
-three-start is written in TypeScript and ships its `.d.ts` files. Out of the box, components and modules are typed; the only piece you opt into is the **module registry**, because the library can't know what modules your project registers until you tell it.
+three-start is written in TypeScript and ships its `.d.ts` files. Out of the box, components and modules are typed; the pieces you opt into are the **module registry** and the **scene registry**, because the library can't know what keys your project registers until you tell it.
 
 ## Module registry
 
@@ -45,6 +45,29 @@ const starter = new ThreeStart().addModules({
 ```
 
 The same registry powers `this.modules` in components, in other modules, and `ctx.modules` for top-level code.
+
+## Scene registry
+
+Without augmentation, `starter.scenes` / `ctx.scenes` / `this.scenes` is `{ Default: THREE.Scene } & Record<string, THREE.Scene>` — `Default` is always typed, other keys are loose. Declare your names once:
+
+```ts title="src/types.d.ts"
+import "three-start";
+import type * as THREE from "three";
+
+declare module "three-start" {
+  interface ThreeStartRegister {
+    scenes: {
+      Default: THREE.Scene;
+      Menu: THREE.Scene;
+      Level: THREE.Scene;
+    };
+  }
+}
+```
+
+After this, `starter.scenes.Menu` and `setScene(ctx, "Menu")` are checked; `starter.scenes.unknown` and `setScene(ctx, "unknown")` fail at compile time. Include `Default` in the map — it is always registered.
+
+The same registry powers `this.scenes` in components and modules, and `ctx.scenes` / `starter.scenes` for top-level code.
 
 ## Typed events on components and modules
 

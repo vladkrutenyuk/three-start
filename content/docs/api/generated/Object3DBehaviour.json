@@ -1,6 +1,6 @@
 {
   "name": "Object3DBehaviour",
-  "description": "Base class for components attached to a Three.js `Object3D`. Extend it, override lifecycle\nhooks (`onAwake`, `onUpdate`, `onDestroy`, …), and attach via [`addComponent`](/docs/api/operations).\nEvery instance gets `this.object`, the shared [`ThreeContext`](/docs/api/three-context) as\n`this.ctx`, and access to registered [`ContextModule`](/docs/api/context-module) instances via `this.modules`.",
+  "description": "Base class for components attached to a Three.js `Object3D`. Extend it, override lifecycle\nhooks (`onAwake`, `onUpdate`, `onDestroy`, …), and attach via [`addComponent`](/docs/api/operations).\nEvery instance gets `this.object`, the shared [`ThreeContext`](/docs/api/three-context) as\n`this.ctx`, registered [`ContextModule`](/docs/api/context-module) instances via `this.modules`,\nand named scenes via `this.scenes`.",
   "generics": "TEvents extends EventMap = {}",
   "extends": "TypedEmitter<TEvents>",
   "properties": [
@@ -24,6 +24,13 @@
       "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">ThreeStartModules</span>",
       "readonly": true,
       "description": "Shortcut to registered [`ContextModule`](/docs/api/context-module) instances: `this.modules.myModule`."
+    },
+    {
+      "name": "scenes",
+      "type": "ThreeStartScenes",
+      "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">ThreeStartScenes</span>",
+      "readonly": true,
+      "description": "Shortcut to named scenes: `this.scenes.Menu`. Same object as `this.ctx.scenes`."
     },
     {
       "name": "enabled",

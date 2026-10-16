@@ -1,12 +1,12 @@
 ---
 title: Operations
-description: Top-level imperative functions for adding components, querying them, toggling activation, and destroying objects.
+description: Top-level imperative functions for components, activation, scenes, and destroying objects.
 ---
 
-These are the top-level functions exported from `three-start` for working with [`Object3DBehaviour`](/docs/api/object3d-behaviour) components and the active state of `Object3D` instances at runtime.
+These are the top-level functions exported from `three-start` for working with [`Object3DBehaviour`](/docs/api/object3d-behaviour) components, the active state of `Object3D` instances, and extra [`scenes`](/docs/core-guides/scenes) at runtime.
 
 ```ts
-import { addComponent, getComponent, getComponents, setActive, getIsActive, getIsActiveSelf, destroy } from "three-start";
+import { addComponent, getComponent, getComponents, setActive, getIsActive, getIsActiveSelf, addScene, setScene, destroy } from "three-start";
 ```
 
 ## addComponent
@@ -103,6 +103,47 @@ Returns `obj`'s **own** active flag — `activeSelf`. The value last passed to `
 setActive(child, false);
 getIsActiveSelf(child); // false
 getIsActive(child);     // false (and would also be false if any ancestor were inactive)
+```
+
+---
+
+## addScene
+
+```ts
+function addScene(
+  ctx: ThreeContext,
+  name: string,
+  scene?: THREE.Scene,
+  camera?: ThreeStartCamera
+): THREE.Scene
+```
+
+Register a named scene on `ctx`. The constructor scene is already `scenes.Default`. Omitted `scene` creates an empty `THREE.Scene`; omitted `camera` creates a `PerspectiveCamera` and parents it to the scene when it has no parent.
+
+Returns the registered scene. Duplicate names throw. A scene or camera object already registered under another name warns and returns that existing scene.
+
+The new scene is not drawn until [`setScene`](#setscene). See the [scenes guide](/docs/core-guides/scenes).
+
+```ts
+addScene(ctx, "Menu");
+addScene(ctx, "Level", myScene, myCamera);
+starter.scenes.Menu.add(mesh);
+```
+
+---
+
+## setScene
+
+```ts
+function setScene(ctx: ThreeContext, name: string): void
+```
+
+Make `ctx.scenes[name]` the active scene — the one `ctx.scene` / `ctx.camera` point at, and the one the renderer draws. Same scene is a no-op. An unknown name throws.
+
+Components on the previous scene receive `onDisable`; components on the new scene resume (`onEnable`) or, the first time after `start()`, run the full bootstrap. Modules keep running.
+
+```ts
+setScene(ctx, "Menu");
 ```
 
 ---

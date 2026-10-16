@@ -2,6 +2,8 @@ import type * as THREE from "three";
 import type { Object3DBehaviourConstructor } from "./Object3DBehaviour";
 import { Object3DBehaviour } from "./Object3DBehaviour";
 import { ensureExtension, getExtension, isActiveInHierarchy } from "./Object3DExtension";
+import type { ThreeContext, ThreeStartCamera, ThreeStartScenes } from "./ThreeContext";
+import { _starterFor } from "./ThreeStart";
 
 /**
  * Activate or deactivate an Object3D and cascade the change through every descendant
@@ -96,4 +98,38 @@ export function destroy(target: THREE.Object3D | Object3DBehaviour) {
 		});
 		target.removeFromParent();
 	}
+}
+
+/**
+ * Register a named `THREE.Scene` on `ctx`. The constructor scene is already
+ * `scenes.Default`. Omitted `scene` creates an empty one; omitted `camera`
+ * creates a `PerspectiveCamera` and adds it to the scene when it has no parent.
+ *
+ * Duplicate names throw. A scene or camera that is already registered under
+ * another name warns and returns the existing scene. The new scene is not shown
+ * until [`setScene`](/docs/api/operations).
+ */
+export function addScene(
+	ctx: ThreeContext,
+	name: keyof ThreeStartScenes & string,
+	scene?: THREE.Scene,
+	camera?: ThreeStartCamera
+): THREE.Scene {
+	return _starterFor(ctx)._addScene(name, scene, camera);
+}
+
+/**
+ * Make `ctx.scenes[name]` the scene [`ctx.scene`](/docs/api/three-context) /
+ * [`ctx.camera`](/docs/api/three-context) point at, and the one the renderer draws.
+ * Same scene is a no-op. An unknown name throws.
+ *
+ * Components on the previous scene receive `onDisable` and pause; components on the
+ * new scene resume (`onEnable`) or, the first time after `start()`, run the full
+ * bootstrap. [`ContextModule`](/docs/api/context-module)s keep running.
+ */
+export function setScene(
+	ctx: ThreeContext,
+	name: keyof ThreeStartScenes & string
+): void {
+	_starterFor(ctx)._setScene(name);
 }

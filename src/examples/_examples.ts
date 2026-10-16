@@ -77,4 +77,13 @@ export const EXAMPLES: ExampleItem[] = [
     loadStarter: () => import("./slow-motion/index"),
     loadSource: () => import("./slow-motion/index?raw"),
   },
+  {
+    id: "change-scene",
+    title: "Change scene",
+    tagline:
+      "Click anywhere to switch scene.",
+    concepts: ["addScene", "setScene"],
+    loadStarter: () => import("./change-scene/index"),
+    loadSource: () => import("./change-scene/index?raw"),
+  },
 ];

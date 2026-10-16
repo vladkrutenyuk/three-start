@@ -13,6 +13,13 @@ export class Object3DExtension {
 	readonly components: Object3DBehaviour[] = [];
 	context: ThreeContext | null = null;
 
+	/**
+	 * @internal `false` only on a registered scene that is not currently active.
+	 * Regular objects leave this `true`. A background scene is treated as an
+	 * inactive ancestor, so `activeInHierarchy` is false throughout its tree.
+	 */
+	_isCurrentScene = true;
+
 	private _active = true;
 
 	/**
@@ -26,11 +33,12 @@ export class Object3DExtension {
 
 	/**
 	 * Whether this object is effectively active: its own flag is `true` AND every
-	 * ancestor in the scene tree is also active. Components on this object only
-	 * run their lifecycle while this is `true`.
+	 * ancestor in the scene tree is also active, AND its scene is the one currently
+	 * shown. Components on this object only run their lifecycle while this is `true`.
 	 */
 	get activeInHierarchy(): boolean {
 		if (!this._active) return false;
+		if (!this._isCurrentScene) return false;
 		return parentChainActive(this.object);
 	}
 
@@ -82,7 +90,10 @@ export class Object3DExtension {
 
 		// If our parent chain isn't fully active, our effective state stays inactive
 		// regardless of this flip. Components in our subtree weren't running and won't.
+		// A background scene root is the same: `_isCurrentScene === false` gates the
+		// whole tree until `setScene` brings it forward.
 		if (!parentChainActive(this.object)) return;
+		if (!this._isCurrentScene) return;
 
 		// Our effective state just transitioned. Cascade through the subtree, stopping
 		// at any descendant whose own `activeSelf` is false (its subtree was already
@@ -143,6 +154,7 @@ export function parentChainActive(obj: THREE.Object3D): boolean {
 	while (p) {
 		const e = getExtension(p);
 		if (e && !e.activeSelf) return false;
+		if (e && !e._isCurrentScene) return false;
 		p = p.parent;
 	}
 	return true;
@@ -156,6 +168,7 @@ export function parentChainActive(obj: THREE.Object3D): boolean {
 export function isActiveInHierarchy(obj: THREE.Object3D): boolean {
 	const e = getExtension(obj);
 	if (e && !e.activeSelf) return false;
+	if (e && !e._isCurrentScene) return false;
 	return parentChainActive(obj);
 }
 
@@ -193,12 +206,14 @@ function deactivateNode(node: THREE.Object3D) {
 	}
 }
 
-function activateSubtree(root: THREE.Object3D) {
+/** @internal */
+export function activateSubtree(root: THREE.Object3D) {
 	// `root.activeSelf` was just set to true, so `traverseActiveSelf` will descend through it.
 	traverseActiveSelf(root, activateNode);
 }
 
-function deactivateSubtree(root: THREE.Object3D) {
+/** @internal */
+export function deactivateSubtree(root: THREE.Object3D) {
 	// `root.activeSelf` was just set to false, so we process root explicitly,
 	// then descend into each child via traverseActiveSelf (which prunes inactive subtrees).
 	deactivateNode(root);

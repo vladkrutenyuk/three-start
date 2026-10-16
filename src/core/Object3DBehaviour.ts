@@ -1,6 +1,6 @@
 import type * as THREE from "three";
 import type { Object3DExtension } from "./Object3DExtension";
-import { ThreeContextEvents, type ThreeContext } from "./ThreeContext";
+import { ThreeContextEvents, type ThreeContext, type ThreeStartScenes } from "./ThreeContext";
 import type { ThreeStartModules } from "./ContextModule";
 import { TypedEmitter, type EventMap } from "./TypedEmitter";
 import { callHook } from "./utils/lifecycle-errors";
@@ -11,7 +11,8 @@ const proto = () => Object3DBehaviour.prototype;
  * Base class for components attached to a Three.js `Object3D`. Extend it, override lifecycle
  * hooks (`onAwake`, `onUpdate`, `onDestroy`, …), and attach via [`addComponent`](/docs/api/operations).
  * Every instance gets `this.object`, the shared [`ThreeContext`](/docs/api/three-context) as
- * `this.ctx`, and access to registered [`ContextModule`](/docs/api/context-module) instances via `this.modules`.
+ * `this.ctx`, registered [`ContextModule`](/docs/api/context-module) instances via `this.modules`,
+ * and named scenes via `this.scenes`.
  */
 export abstract class Object3DBehaviour<
 	TEvents extends EventMap = {},
@@ -42,6 +43,11 @@ export abstract class Object3DBehaviour<
 	/** Shortcut to registered [`ContextModule`](/docs/api/context-module) instances: `this.modules.myModule`. */
 	get modules(): ThreeStartModules {
 		return this._ctx!.modules;
+	}
+
+	/** Shortcut to named scenes: `this.scenes.Menu`. Same object as `this.ctx.scenes`. */
+	get scenes(): ThreeStartScenes {
+		return this._ctx!.scenes;
 	}
 
 	/** `true` while the component is enabled. Toggle with `enable()` / `disable()` / `setEnabled()`. */

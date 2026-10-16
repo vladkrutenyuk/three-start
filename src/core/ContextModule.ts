@@ -1,4 +1,4 @@
-import { ThreeContextEvents, type ThreeContext } from "./ThreeContext";
+import { ThreeContextEvents, type ThreeContext, type ThreeStartScenes } from "./ThreeContext";
 import type { RegisterField } from "./Register";
 import { TypedEmitter, type EventMap } from "./TypedEmitter";
 
@@ -41,6 +41,11 @@ export abstract class ContextModule<
 	/** Shortcut to sibling [`ContextModule`](/docs/api/context-module) instances: `this.modules.myModule`. */
 	get modules(): ThreeStartModules {
 		return this._ctx!.modules;
+	}
+
+	/** Shortcut to named scenes: `this.scenes.Menu`. Same object as `this.ctx.scenes`. */
+	get scenes(): ThreeStartScenes {
+		return this._ctx!.scenes;
 	}
 
 	// lifecycle

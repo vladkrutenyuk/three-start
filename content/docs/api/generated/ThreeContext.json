@@ -1,13 +1,20 @@
 {
   "name": "ThreeContext",
-  "description": "The shared runtime of a scene — renderer, camera, animation loop, timer, render pipeline,\nevent bus, and [`ContextModule`](/docs/api/context-module) registry. Created and owned\nby [`ThreeStart`](/docs/api/three-start); exposed to every\n[`Object3DBehaviour`](/docs/api/object3d-behaviour) and module as `this.ctx`.",
+  "description": "The shared runtime of a [`ThreeStart`](/docs/api/three-start) instance — renderer,\nactive scene, camera, animation loop, timer, render pipeline, event bus, and\n[`ContextModule`](/docs/api/context-module) registry. Exposed to every\n[`Object3DBehaviour`](/docs/api/object3d-behaviour) and module as `this.ctx`.",
   "extends": "TypedEmitter<ThreeContextEventMap>",
   "properties": [
+    {
+      "name": "scene",
+      "type": "THREE.Scene",
+      "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">THREE</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">.Scene</span>",
+      "readonly": true,
+      "description": "The scene currently being rendered. Always the active scene of the owning\n[`ThreeStart`](/docs/api/three-start). Reassigning throws — switch with\n[`setScene`](/docs/api/operations)."
+    },
     {
       "name": "camera",
       "type": "THREE.PerspectiveCamera",
       "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">THREE</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">.PerspectiveCamera</span>",
-      "description": "The active camera, typed as perspective for the common case. Reassigning it swaps the\ncamera used by the scene pass and fires `CameraChanged`. If an orthographic camera is\nactive, this returns it too: check `isOrtho` and use `ortho` in orthographic scenes."
+      "description": "The active camera, typed as perspective for the common case. Reassigning it swaps the\ncamera used by the active scene's pass and fires `CameraChanged`. Each registered scene\nkeeps its own camera — this assignment updates only the scene currently in `scene`.\nIf an orthographic camera is active, this returns it too: check `isOrtho` and use\n`ortho` in orthographic scenes."
     },
     {
       "name": "ortho",
@@ -58,11 +65,11 @@
       "description": "The Three.js renderer owned by this context. Sealed at construction."
     },
     {
-      "name": "scene",
-      "type": "THREE.Scene",
-      "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">THREE</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">.Scene</span>",
+      "name": "scenes",
+      "type": "ThreeStartScenes",
+      "typeHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">ThreeStartScenes</span>",
       "readonly": true,
-      "description": "The root `Scene` that components and the camera live in. Sealed at construction."
+      "description": "Registered scenes by name. `Default` is the constructor scene. Read-only at\nruntime — mutations throw. Populate via [`addScene`](/docs/api/operations).\nSame object as `starter.scenes`."
     },
     {
       "name": "renderPipeline",
@@ -76,7 +83,7 @@
       "type": "THREE.PassNode",
       "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">THREE</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">.PassNode</span>",
       "readonly": true,
-      "description": "The scene pass node fed into `renderPipeline`. Attach post-processing effects to it via TSL."
+      "description": "The scene pass node fed into `renderPipeline`. Bound to the active scene and camera; attach post-processing effects to it via TSL."
     },
     {
       "name": "modules",
@@ -262,7 +269,26 @@
             "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">THREE</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">.PerspectiveCamera</span>"
           }
         ],
-        "description": "Fired when `ctx.camera` is reassigned. Carries the new and previous cameras."
+        "description": "Fired when `ctx.camera` is reassigned, including when `setScene()` restores a scene's camera. Carries the new and previous cameras."
+      },
+      {
+        "name": "SceneChanged",
+        "key": "ThreeContextEvents.SceneChanged",
+        "keyHtml": "<span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">ThreeContextEvents.SceneChanged</span>",
+        "value": "scenechanged",
+        "args": [
+          {
+            "name": "newScene",
+            "type": "THREE.Scene",
+            "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">THREE</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">.Scene</span>"
+          },
+          {
+            "name": "prevScene",
+            "type": "THREE.Scene",
+            "typeHtml": "<span style=\"--shiki-light:#005CC5;--shiki-dark:#79B8FF\">THREE</span><span style=\"--shiki-light:#24292E;--shiki-dark:#E1E4E8\">.Scene</span>"
+          }
+        ],
+        "description": "Fired when `setScene()` switches the active scene. Carries the new and previous scenes."
       },
       {
         "name": "LoopRun",

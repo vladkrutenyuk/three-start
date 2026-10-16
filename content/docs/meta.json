@@ -13,6 +13,7 @@
     "core-guides/context",
     "core-guides/lifecycle",
     "core-guides/set-active",
+    "core-guides/scenes",
     "core-guides/typescript",
     "react",
     "---",

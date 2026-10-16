@@ -5,7 +5,7 @@ description: The shared runtime for a scene — renderer, camera, loop, events, 
 
 import doc from './generated/ThreeContext.json'
 
-`ThreeContext` is the single runtime object for a scene. It holds the renderer, scene, camera, animation loop, timer, and event bus.
+`ThreeContext` is the single runtime object for a [`ThreeStart`](/docs/api/three-start) instance. It holds the renderer, the active scene, named `scenes` map, camera, animation loop, timer, and event bus. Extra scenes: [Scenes](/docs/core-guides/scenes).
 
 You don't construct `ThreeContext` directly — it's created automatically inside [`ThreeStart`](/docs/api/three-start) and exposed via its [`ctx`](/docs/api/three-start#properties) field.
 

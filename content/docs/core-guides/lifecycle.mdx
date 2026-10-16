@@ -49,7 +49,7 @@ flowchart TB
   Bootstrap touches **only**:
 
   - **Modules** registered on your `ThreeStart` instance via `addModules()`.
-  - **Components** added via `addComponent()` to objects that were added to the scene tree of your `ThreeStart` instance's context (`ctx`).
+  - **Components** added via `addComponent()` to objects that were added to the **active** scene (`ctx.scene`). Other registered scenes bootstrap on their first [`setScene`](/docs/api/operations) after `start()`.
 </Callout>
 
 <Callout type="info">
@@ -83,7 +83,7 @@ flowchart LR
 A component starts its lifecycle the moment **all three** of these are true:
 
 * [x] The component was added to an `Object3D` via `addComponent(obj, MyComp)`.
-* [x] That object was added to the scene tree of your `ThreeStart` instance's context (`ctx.scene`).
+* [x] That object was added to the **active** scene tree of your `ThreeStart` instance (`ctx.scene`). Components on a registered scene that is not currently shown wait until [`setScene`](/docs/api/operations) brings that scene forward — see [Scenes](/docs/core-guides/scenes).
 * [x] `ThreeStart.start()` was called.
 
 <Callout type="info">
