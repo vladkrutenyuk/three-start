@@ -143,7 +143,7 @@ Common events:
 | Event | Payload | When |
 |---|---|---|
 | `Update` / `RenderBefore` / `RenderAfter` | none | Each frame. Components and modules use these via their event methods, but you can subscribe directly when you need finer control. |
-| `Resized` | `width, height` | First mount and every container resize. |
+| `Resized` | `width, height` | First mount and every container resize. A container that measures 0×0 (hidden or detached) is skipped: the canvas keeps its last size. |
 | `Mount` / `Unmount` | container / none | Canvas attached / detached. |
 | `LoopRun` / `LoopStop` | none | Animation loop started / stopped. |
 | `CameraChanged` | `newCamera, prevCamera` | `ctx.camera` or `ctx.ortho` was assigned. |

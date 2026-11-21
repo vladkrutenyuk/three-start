@@ -446,6 +446,9 @@ export class ThreeContext extends TypedEmitter<ThreeContextEventMap> {
 
 		const width = container.offsetWidth;
 		const height = container.offsetHeight;
+		// A hidden or detached container measures 0×0: a canvas of that size has no
+		// swapchain texture, so every render would fail. Keep the last size instead.
+		if (width === 0 || height === 0) return;
 
 		fitCameraToAspect(this._camera, width / height);
 

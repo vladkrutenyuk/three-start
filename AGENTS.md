@@ -145,6 +145,7 @@ Read these first:
 
 - `tests/frame-limiter.test.ts` — the `maxFps` schedule (`src/core/utils/frame-limiter.ts`) fed synthetic rAF timestamps: display rates, jitter, dropped frames, gaps, limit changes. Deterministic, milliseconds.
 - `tests/max-fps.test.ts` — the render loop on a real `WebGPURenderer`: tick rate, TSL `deltaTime` / `frameId` read back from a compute pass, the rendered pixel's TSL `time`, `maxFpsPatchesRenderer`, `dispose()`, a replayed WebXR session. These measure real frames, so their assertions keep a few percent of slack.
+- `tests/resize.test.ts` — the canvas follows the container size, and a 0×0 container (hidden or detached) keeps the last size instead of resizing the canvas to nothing.
 - `tests/helpers/` — `simulate-display.ts` (synthetic display for the schedule), `scene.ts` (instrumented `ThreeStart` scene, three internals the tests read).
 
 Files run one at a time (`fileParallelism: false`): each runs in its own iframe, and a background iframe gets no `requestAnimationFrame`.
